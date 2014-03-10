@@ -99,6 +99,7 @@ public class Creature extends Item {
      * Returns an action based on the provided map and the creature's AI.
      *
      * @param map
+     * @param player
      * @return
      */
     public ActionType getAction(Map map, Creature player) {

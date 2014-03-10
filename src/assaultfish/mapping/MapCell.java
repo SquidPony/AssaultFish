@@ -1,7 +1,6 @@
 package assaultfish.mapping;
 
-import assaultfish.old.physical.Creature;
-import assaultfish.old.physical.Interaction;
+import assaultfish.physical.Creature;
 import assaultfish.physical.Item;
 import assaultfish.physical.Terrain;
 import assaultfish.physical.TerrainFeature;
@@ -21,7 +20,6 @@ public class MapCell implements FOVCell {
     public Creature creature;
     public Terrain terrain;
     public TerrainFeature feature;
-    public Interaction interaction;
     public Item item;
     public SColor light = SColor.BLACK;
     public boolean seen = false;
@@ -65,66 +63,52 @@ public class MapCell implements FOVCell {
     public SColor color() {
         //unlit
         if (light.equals(SColor.BLACK)) {
-            if (creature != null) {
-                if (creature.heard || creature.smelled) {
-                    return SColorFactory.blend(SColorFactory.desaturate(creature.color, 0.3f), SColor.BLACK, 0.65f);
-                }
-            }
-            if (seen) {
+            if (seen) {//previously seen
                 if (item != null) {
-                    return SColorFactory.blend(SColorFactory.desaturated(item.color), SColor.BLACK, 0.75f);
+                    return SColorFactory.blend(SColorFactory.desaturated(item.getColor()), SColor.BLACK, 0.75f);
+                } else if (feature != null) {
+                    return SColorFactory.blend(SColorFactory.desaturated(feature.getColor()), SColor.BLACK, 0.75f);
                 } else {
-                    return SColorFactory.blend(SColorFactory.desaturated(furniture.color), SColor.BLACK, 0.75f);
+                    return SColorFactory.blend(SColorFactory.desaturated(terrain.getColor()), SColor.BLACK, 0.75f);
                 }
             }
             return SColor.BLACK;//nothing to see
         }
 
         //lit
-        SColor coloring = null;
-        Item display = creature;
-        if (display == null) {
-            display = item;
-        } else {
-            if (creature.hiding) {
-                coloring = SColorFactory.blend(SColor.BLACK, creature.color, 0.8f);
-            }
-        }
-        if (display == null) {
-            display = furniture;
-        }
-        if (coloring == null) {
-            coloring = display.color;
-        }
-        return SColorFactory.lightWith(coloring, light);
+        return SColorFactory.lightWith(getTopItem().getColor(), light);
     }
 
-    public int getSymbol() {
+    public String getSymbol() {
         //unlit
         if (light.equals(SColor.BLACK)) {
-            if (creature != null) {
-                if (creature.heard || creature.smelled) {
-                    return creature.symbol;
-                }
-            }
             if (seen) {
                 if (item != null) {
-                    return item.symbol;
+                    return item.getSymbol();
+                } else if (feature != null) {
+                    return feature.getSymbol();
                 } else {
-                    return furniture.symbol;
+                    return terrain.getSymbol();
                 }
             }
-            return ' ';//nothing to see
+            return " ";//nothing to see
         }
 
         //lit
+        return getTopItem().getSymbol();
+    }
+
+    public Item getTopItem() {
         Item display = creature;
         if (display == null) {
             display = item;
         }
         if (display == null) {
-            display = furniture;
+            display = feature;
         }
-        return display.symbol;
+        if (display == null) {
+            display = terrain;
+        }
+        return display;
     }
 }

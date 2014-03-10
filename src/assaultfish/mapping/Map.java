@@ -10,6 +10,7 @@ import squidpony.squidutility.graph.PointGraph;
 import squidpony.squidutility.graph.Vertex;
 
 /**
+ * This is a map for the turn based roguelike portion of the game.
  *
  * @author Eben Howard - http://squidpony.com - howard@squidpony.com
  */
@@ -36,7 +37,7 @@ public class Map {
         FOVTranslator fov = new FOVTranslator(new ShadowFOV());
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                if (map[x][y].furniture.sightBlocking) {
+                if (map[x][y].feature.opacity >= 1f) {
                     sightBlocking[x][y] = 1f;
                 } else {
                     sightBlocking[x][y] = 0f;
@@ -63,7 +64,7 @@ public class Map {
                 }
             }
         }
-        
+
         graph.calculateEdges(sightBlocking);
     }
 
