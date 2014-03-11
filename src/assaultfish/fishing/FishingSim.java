@@ -2,19 +2,21 @@ package assaultfish.fishing;
 
 import assaultfish.physical.Terrain;
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
+import javax.swing.JPanel;
 import squidpony.squidcolor.SColor;
 import squidpony.squidcolor.SColorFactory;
 import squidpony.squidgrid.gui.awt.TextCellFactory;
 import squidpony.squidgrid.gui.awt.event.SGKeyListener;
+import squidpony.squidgrid.gui.awt.event.SGMouseListener;
 import squidpony.squidgrid.gui.swing.SwingPane;
 import squidpony.squidgrid.util.Direction;
 import static squidpony.squidgrid.util.Direction.*;
@@ -28,7 +30,9 @@ import squidpony.squidmath.RNG;
  */
 public class FishingSim {
 
-    private JFrame frame;
+    private JComponent parent;
+    private SGKeyListener keys;
+    private SGMouseListener mouses;
     private SwingPane pane, largeTextPane, meterPane, fishPane;
     private int largeTextScale;
     private boolean[][] terrainMap;
@@ -53,38 +57,83 @@ public class FishingSim {
             playerColor = SColor.BETEL_NUT_DYE;
     private Font font;
     private RNG rng = new RNG();
-    private SGKeyListener keys;
 
     private int liquidHeight;
     private int terrainWidth;
 
+    /**
+     * Starts up a stand-alone instance for testing.
+     *
+     * @param args
+     */
     public static void main(String... args) {
-        ArrayList<SColor> pallet = SColorFactory.asGradient(SColor.RED, SColor.ORANGE);
-        pallet.addAll(SColorFactory.asGradient(SColor.ORANGE, SColor.YELLOW));
-        pallet.addAll(SColorFactory.asGradient(SColor.YELLOW, SColor.ELECTRIC_GREEN));
-        SColorFactory.addPallet("meter", pallet);
+        JFrame frame = new JFrame("Fishing Prototype");
+        frame.setBackground(SColor.BLACK);
+        frame.getContentPane().setBackground(SColor.BLACK);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        JPanel panel = new JPanel();
+        panel.setBackground(SColor.BLACK);
+        panel.setPreferredSize(new Dimension(1800, 900));
+        frame.getContentPane().add(panel);
+        SGKeyListener listen = new SGKeyListener(false, SGKeyListener.CaptureType.TYPED);
+        frame.addKeyListener(listen);
 
-        new FishingSim().go();
+        FishingSim sim = new FishingSim(panel, listen, 100, 60);
+
+        frame.pack();
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+
+        ArrayList<Fish> creel = sim.goFish();
+
+        System.out.println("Fish Caught");
+        for (Fish f : creel) {
+            System.out.println(f);
+        }
     }
 
-    private void go() {
-        width = 100;
-        height = 40;
+    /**
+     * Builds the game into the passed in component, which should be an empty component with the
+     * desired preferredSize preset. The size of the grid should be evenly divisible by 3 and 4 for
+     * optimal display. The key listener is expected to be non-blocking as this sim is event driven
+     * rather than modal.
+     *
+     * @param parent
+     * @param keys
+     * @param gridWidth how wide in grid cells the sim should be
+     * @param gridHeight how high in grid cells the sim should be, includes the 3-cell-high meter
+     */
+    public FishingSim(JComponent parent, SGKeyListener keys, int gridWidth, int gridHeight) {
+        this.parent = parent;
+        this.keys = keys;
+
+        width = gridWidth;
+        height = gridHeight;
         largeTextScale = 4;
         liquidHeight = largeTextScale * 4;
         terrainWidth = largeTextScale * 2 + 1;
-        font = new Font("Arial Unicode MS", Font.BOLD, 14);
+
+        if (SColorFactory.pallet("meter") == null) {
+            ArrayList<SColor> pallet = SColorFactory.asGradient(SColor.RED, SColor.ORANGE);
+            pallet.addAll(SColorFactory.asGradient(SColor.ORANGE, SColor.YELLOW));
+            pallet.addAll(SColorFactory.asGradient(SColor.YELLOW, SColor.ELECTRIC_GREEN));
+            SColorFactory.addPallet("meter", pallet);
+        }
+
         initFrame();
         initMap();
         initFish();
         initMeter();
         displayMap();
-        
-        frame.setVisible(true);
+    }
 
-        keys = new SGKeyListener(false, SGKeyListener.CaptureType.TYPED);
-        frame.addKeyListener(keys);
-
+    /**
+     * Starts the fishing sim and returns a list of all fish caught.
+     *
+     * @return
+     */
+    public ArrayList<Fish> goFish() {
+        ArrayList<Fish> caught = new ArrayList<>();
         char key = '∅';
         do {
             if (keys.hasNext()) {
@@ -93,28 +142,41 @@ public class FishingSim {
                     case ' ':
                         displayMap();
                         throwBobber();
-                        dropHook();
+                        Fish f = dropHook();
+                        if (f != null) {
+                            caught.add(f);
+                        }
                         keys.flush();
                         break;
                     case 'x':
                         displayMap();
                         break;
+                    case 'r':
+                        initMap();
+                        initFish();
+                        initMeter();
+                        displayMap();
+                        break;
                 }
             }
+            Thread.yield();
         } while (key != 'Q');
+
+        return caught;
     }
 
     private Fish dropHook() {
         pane.placeCharacter(bobberLocation.x, bobberLocation.y + 1, hook, hookColor);
         pane.refresh();
+        int x = bobberLocation.x;
         int y;
-        for (y = bobberLocation.y + 2; y <= bed(bobberLocation.x); y++) {
+        for (y = bobberLocation.y + 2; y <= bed(x); y++) {
             try {
                 Thread.sleep(30);
             } catch (InterruptedException ex) {
             }
-            pane.placeCharacter(bobberLocation.x, y - 1, line(UP), lineColor);
-            pane.placeCharacter(bobberLocation.x, y, hook, hookColor);
+            pane.placeCharacter(x, y - 1, line(UP), lineColor);
+            pane.placeCharacter(x, y, hook, hookColor);
             pane.refresh();
         }
 
@@ -123,10 +185,21 @@ public class FishingSim {
         } catch (InterruptedException ex) {
         }
 
+        Fish fish = null;
         do {
-            pane.clearCell(bobberLocation.x, y);
+            pane.clearCell(x, y);
+
             y--;
-            pane.placeCharacter(bobberLocation.x, y, hook, hookColor);
+            pane.placeCharacter(x, y, hook, hookColor);
+            if (fish != null) {
+                pane.placeCharacter(x, y, fish.getSymbol().charAt(0), fish.getColor());
+            } else if (fishMap[x][y] != null) {
+                fish = fishMap[x][y];
+                fishes.remove(fish);
+                fishMap[x][y] = null;
+                fishPane.clearCell(x, y);
+                fishPane.refresh();
+            }
             pane.refresh();
 
             try {
@@ -135,7 +208,7 @@ public class FishingSim {
             }
         } while (y > bobberLocation.y + 1);
 
-        return null;
+        return fish;
     }
 
     private void throwBobber() {
@@ -316,16 +389,17 @@ public class FishingSim {
     }
 
     private void initFrame() {
-        frame = new JFrame("Fishing Prototype");
-        frame.setBackground(SColor.BLACK);
-        frame.getContentPane().setBackground(SColor.BLACK);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        int cellWidth = parent.getPreferredSize().width / width;
+        int cellHeight = parent.getPreferredSize().height / height;
+        font = new Font("Arial Unicode MS", Font.BOLD, cellHeight + cellWidth);
+
         JLayeredPane layers = new JLayeredPane();
-        frame.add(layers, BorderLayout.WEST);
+        parent.setLayout(new BorderLayout());
+        parent.add(layers, BorderLayout.WEST);
 
         TextCellFactory textFactory = new TextCellFactory();
         textFactory.setAntialias(true);
-        textFactory.initializeByFont(font);
+        textFactory.initializeBySize(cellWidth, cellHeight, font);
         pane = new SwingPane(width, height, textFactory);
         layers.setLayer(pane, JLayeredPane.DEFAULT_LAYER);
         layers.add(pane);
@@ -338,7 +412,7 @@ public class FishingSim {
 
         meterPane = new SwingPane(width, 3, textFactory);
         meterPane.setDefaultBackground(SColor.BLACK);
-        frame.add(meterPane, BorderLayout.SOUTH);
+        parent.add(meterPane, BorderLayout.SOUTH);
 
         TextCellFactory largeFactory = new TextCellFactory();
         largeFactory.setAntialias(true);
@@ -348,8 +422,6 @@ public class FishingSim {
         layers.add(largeTextPane);
 
         layers.setPreferredSize(pane.getPreferredSize());
-        frame.pack();
-        frame.setLocationRelativeTo(null);
     }
 
     private char line(Direction dir) {
