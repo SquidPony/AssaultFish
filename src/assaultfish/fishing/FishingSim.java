@@ -4,7 +4,9 @@ import assaultfish.physical.Terrain;
 import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.Point;
-import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFrame;
@@ -27,19 +29,21 @@ import squidpony.squidmath.RNG;
 public class FishingSim {
 
     private JFrame frame;
-    private SwingPane pane, largeTextPane, meterPane;
+    private SwingPane pane, largeTextPane, meterPane, fishPane;
     private int largeTextScale;
     private boolean[][] terrainMap;
     private boolean[][] liquidMap;
+    private Fish[][] fishMap;
+    private List<Fish> fishes = new LinkedList<>();
     private int width, height;
+    private double wind = 10, gravity = 20;
     private Terrain terrain;
-    private char bobber = 'O',
+    private char bobber = '●',//O•☉✆✇♁┢Ø∅∮⊕⊖⊗⊘⊙⊚⊛⊜⊝Ⓧ◍◎●◐◑◒◓◔◕☯☮☻☺☹✪➊➋➌➍➎➏➐➑➒➓〄〇〶
             hook = 'J',
-            fish = 'f',
             wall = '#';
     private Point bobberLocation;
     private Point hookLocation;
-    private SColor lineColor = SColor.SILVER,
+    private SColor lineColor = SColor.BURNT_BAMBOO,
             bobberColor = SColor.SCARLET,
             hookColor = SColor.BRASS,
             terrainBackColor = SColor.BRONZE,
@@ -55,13 +59,12 @@ public class FishingSim {
     private int terrainWidth;
 
     public static void main(String... args) {
-//        new FishingSim().go();
-        new FishingSim().test();
-    }
+        ArrayList<SColor> pallet = SColorFactory.asGradient(SColor.RED, SColor.ORANGE);
+        pallet.addAll(SColorFactory.asGradient(SColor.ORANGE, SColor.YELLOW));
+        pallet.addAll(SColorFactory.asGradient(SColor.YELLOW, SColor.ELECTRIC_GREEN));
+        SColorFactory.addPallet("meter", pallet);
 
-    private void test() {
-        BallisticsSolver solver = new BallisticsSolver(10, 30, 50, 50);
-        solver.solveByHeight(2);
+        new FishingSim().go();
     }
 
     private void go() {
@@ -70,109 +73,144 @@ public class FishingSim {
         largeTextScale = 4;
         liquidHeight = largeTextScale * 4;
         terrainWidth = largeTextScale * 2 + 1;
-        font = new Font("Ariel", Font.PLAIN, 14);
+        font = new Font("Arial Unicode MS", Font.BOLD, 14);
         initFrame();
         initMap();
+        initFish();
         initMeter();
         displayMap();
+        
+        frame.setVisible(true);
 
-        keys = new SGKeyListener(true, SGKeyListener.CaptureType.TYPED);
+        keys = new SGKeyListener(false, SGKeyListener.CaptureType.TYPED);
         frame.addKeyListener(keys);
 
-        char key;
+        char key = '∅';
         do {
-            key = keys.next().getKeyChar();
-            switch (key) {
-                case ' ':
-                    displayMap();
-                    throwBobber();
-                    break;
-                case 'x':
-                    displayMap();
-                    break;
+            if (keys.hasNext()) {
+                key = keys.next().getKeyChar();
+                switch (key) {
+                    case ' ':
+                        displayMap();
+                        throwBobber();
+                        dropHook();
+                        keys.flush();
+                        break;
+                    case 'x':
+                        displayMap();
+                        break;
+                }
             }
         } while (key != 'Q');
     }
 
-    private void throwBobber() {
-        keys.blockOnEmpty(false);//switch to event based
+    private Fish dropHook() {
+        pane.placeCharacter(bobberLocation.x, bobberLocation.y + 1, hook, hookColor);
+        pane.refresh();
+        int y;
+        for (y = bobberLocation.y + 2; y <= bed(bobberLocation.x); y++) {
+            try {
+                Thread.sleep(30);
+            } catch (InterruptedException ex) {
+            }
+            pane.placeCharacter(bobberLocation.x, y - 1, line(UP), lineColor);
+            pane.placeCharacter(bobberLocation.x, y, hook, hookColor);
+            pane.refresh();
+        }
 
-        char key = 'x';
-        meterPane.placeHorizontalString((meterPane.getGridWidth() - "Cast Strength".length() - 1) / 2, 0, "Cast Strength");
-        meterPane.placeHorizontalString(2, 0, "None");
-        meterPane.placeHorizontalString(meterPane.getGridWidth() - 3 - "Max".length(), 0, "Max");
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException ex) {
+        }
 
-        int strengthMin = 3, strengthMax = 100;
-        double time = 0, strength = strengthMin;
         do {
-            strength = (Math.abs(Math.sin(time)) / Math.PI) * (strengthMax - strengthMin);
-            strength += strengthMin;
+            pane.clearCell(bobberLocation.x, y);
+            y--;
+            pane.placeCharacter(bobberLocation.x, y, hook, hookColor);
+            pane.refresh();
+
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException ex) {
+            }
+        } while (y > bobberLocation.y + 1);
+
+        return null;
+    }
+
+    private void throwBobber() {
+        double strength = getStrength();
+        int targetX = (int) (strength * (width - 1 - width / 3.0) + width / 3.0);//finds drop target based on strength percent
+        int startY = largeTextScale * 2 + 1;//start at the guy's head
+        int startX = terrainWidth;//start at the shoreline
+
+        BallisticsSolver solver = new BallisticsSolver(startX, startY, targetX - 1, liquidHeight - 2, wind, gravity);
+        solver.solveByHeight(2);
+
+        int lastX = -1, lastY = -1, bobberX = -2, bobberY = -2;
+        double trueTime = solver.getTime();
+        int targetTime = targetX * 20;//in milliseconds
+        long lastTime;
+        for (double time = 0; time <= targetTime; time += System.currentTimeMillis() - lastTime) {
+            lastTime = System.currentTimeMillis();
+            double solverTime = trueTime * time / targetTime;
+            bobberX = solver.x(solverTime);
+            bobberY = solver.y(solverTime);
+            if (lastX != bobberX) {
+                pane.placeCharacter(lastX, lastY, line(getDirection(bobberX - lastX, bobberY - lastY)), lineColor);
+                pane.placeCharacter(bobberX, bobberY, bobber, bobberColor);
+                pane.refresh();
+                lastX = bobberX;
+                lastY = bobberY;
+            }
+
+            Thread.yield();
+        }
+
+        pane.placeCharacter(bobberX, bobberY, line(getDirection(bobberX - lastX, bobberY - lastY)), lineColor);
+        pane.placeCharacter(bobberX + 1, bobberY + 1, bobber, bobberColor);
+        bobberLocation = new Point(bobberX + 1, bobberY + 1);
+        pane.refresh();
+
+        for (int x = 1; x < meterPane.getGridWidth() - 1; x++) {
+            meterPane.placeCharacter(x, 1, ' ');
+        }
+        meterPane.refresh();
+    }
+
+    /**
+     * Returns the percentage of max strength;
+     *
+     * @return
+     */
+    private double getStrength() {
+        char key = 'x';
+
+        double strength;
+        double timeStep = 1000;//how many milliseconds per time step
+        long time = 0, lastTime = System.currentTimeMillis();
+        do {
+            strength = Math.abs(Math.sin(time / timeStep));
+            int drawX = (int) (strength * (width - 3)) + 3;
             for (int x = 1; x < meterPane.getGridWidth() - 1; x++) {
-                if (x < (strength / strengthMax) * (meterPane.getWidth() - 4) + 4) {
-                    meterPane.placeCharacter(x, 1, '#');
+                if (x < drawX) {
+                    meterPane.placeCharacter(x, 1, '●', SColorFactory.fromPallet("meter", x / (float) (meterPane.getGridWidth())));
                 } else {
                     meterPane.clearCell(x, 1);
                 }
             }
             meterPane.refresh();
 
-            try {
-                Thread.sleep(20);
-            } catch (InterruptedException ex) {
-                Logger.getLogger(FishingSim.class.getName()).log(Level.SEVERE, null, ex);
-            }
-
+            Thread.yield();
             if (keys.hasNext()) {
                 key = keys.next().getKeyChar();
             }
 
-            time += 0.001;
+            time += System.currentTimeMillis() - lastTime;
+            lastTime = System.currentTimeMillis();
         } while (key != ' ');
 
-        int targetX = (int) ((strength / strengthMax) * (width - 1 - width / 3) + width / 3);
-//        int targetX = rng.between(width / 3, width - 2);
-        int startY = largeTextScale * 2 + 1;//start at the guy's head
-        int startX = terrainWidth;//start at the shoreline
-
-        double forceRight = targetX - startX;
-        double forceUp = startY - 1;//all the way to the top then back to water level
-        double gravity = (forceUp + liquidHeight - 1) / (double) (targetX - startX);//how much fall per square
-
-        double x = startX;
-        double y = startY;
-
-        int bobberX = startX;
-        int bobberY = startY;
-        pane.placeCharacter(bobberX, bobberY, bobber, bobberColor);
-        pane.refresh();
-
-        while (x < targetX || y < liquidHeight - 1) {
-            try {
-                Thread.sleep(20);
-            } catch (InterruptedException ex) {
-            }
-
-            x = Math.min(x + 1, targetX);
-            y += (forceUp - gravity * (x - startX) > 0) ? -gravity : gravity;
-            y = Math.min(y, liquidHeight - 1);
-
-//            pane.clearCell(bobberX, bobberY, SColorFactory.blend(SColorFactory.light(skyColor), SColorFactory.dimmer(skyColor), bobberY / (double) liquidHeight));
-//            pane.refresh();
-            bobberX = (int) x;
-            bobberY = (int) y;
-            pane.placeCharacter(bobberX, bobberY, bobber, bobberColor);
-            pane.refresh();
-        }
-
-        for (time = 0; time <= 1; time += 0.001) {
-            x
-                    = bobberX = (int) x;
-            bobberY = (int) y;
-            pane.placeCharacter(bobberX, bobberY, bobber, bobberColor);
-            pane.refresh();
-        }
-
-        keys.blockOnEmpty(true);
+        return strength;
     }
 
     /**
@@ -206,17 +244,38 @@ public class FishingSim {
             }
         }
 
+        for (Fish f : fishes) {
+            fishPane.placeCharacter(f.location.x, f.location.y, f.getSymbol().charAt(0), f.getColor());
+        }
+
+        fishPane.refresh();
         pane.refresh();
         largeTextPane.refresh();
     }
 
-    private void initMeter() {
-        for (int x = 0; x < meterPane.getGridWidth(); x++) {
-            for (int y = 0; y < meterPane.getGridHeight(); y++) {
-                meterPane.clearCell(x, y);
+    private void initFish() {
+        fishMap = new Fish[width][height];
+
+        for (int i = 0; i < 50; i++) {
+            Fish fish = new Fish(Fish.fishSymbols.charAt(rng.nextInt(Fish.fishSymbols.length())));
+            fishes.add(fish);
+            boolean placed = false;
+            while (!placed) {
+                int x = rng.between(terrainWidth + 1, width);
+                int y = rng.between(liquidHeight, bed(x));
+                if (fishMap[x][y] == null) {
+                    fishMap[x][y] = fish;
+                    fish.location = new Point(x, y);
+                    placed = true;
+                }
             }
         }
+    }
 
+    private void initMeter() {
+        meterPane.placeHorizontalString((meterPane.getGridWidth() - "Cast Strength".length() - 1) / 2, 0, "Cast Strength");
+        meterPane.placeHorizontalString(2, 0, "None");
+        meterPane.placeHorizontalString(meterPane.getGridWidth() - 3 - "Max".length(), 0, "Max");
         meterPane.refresh();
     }
 
@@ -258,6 +317,8 @@ public class FishingSim {
 
     private void initFrame() {
         frame = new JFrame("Fishing Prototype");
+        frame.setBackground(SColor.BLACK);
+        frame.getContentPane().setBackground(SColor.BLACK);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         JLayeredPane layers = new JLayeredPane();
         frame.add(layers, BorderLayout.WEST);
@@ -269,158 +330,45 @@ public class FishingSim {
         layers.setLayer(pane, JLayeredPane.DEFAULT_LAYER);
         layers.add(pane);
 
+        TextCellFactory fishTextFactory = new TextCellFactory(textFactory);
+        fishTextFactory.initializeBySize(pane.getCellWidth(), pane.getCellHeight(), new Font(font.getFontName(), Font.PLAIN, font.getSize() + 2));//a little extra size in case the switch away from bold matters
+        fishPane = new SwingPane(width, height, fishTextFactory);
+        layers.setLayer(pane, JLayeredPane.DEFAULT_LAYER - 10);//set just above the regular map layer
+        layers.add(fishPane);
+
         meterPane = new SwingPane(width, 3, textFactory);
-        meterPane.setDefaultBackground(SColor.BLUE_VIOLET_DYE);
-        meterPane.setDefaultForeground(SColor.BLOOD_RED);
+        meterPane.setDefaultBackground(SColor.BLACK);
         frame.add(meterPane, BorderLayout.SOUTH);
 
         TextCellFactory largeFactory = new TextCellFactory();
         largeFactory.setAntialias(true);
         largeFactory.initializeBySize(pane.getCellWidth() * largeTextScale, pane.getCellHeight() * largeTextScale, new Font(font.getFontName(), Font.BOLD, 92));
         largeTextPane = new SwingPane(width / largeTextScale, height / largeTextScale, largeFactory);
-        largeTextPane.setDefaultBackground(SColor.TRANSPARENT);
-        for (int x = 0; x < largeTextPane.getGridWidth(); x++) {
-            for (int y = 0; y < largeTextPane.getGridHeight(); y++) {
-                largeTextPane.clearCell(x, y);
-            }
-        }
         layers.setLayer(largeTextPane, JLayeredPane.MODAL_LAYER);
         layers.add(largeTextPane);
 
         layers.setPreferredSize(pane.getPreferredSize());
         frame.pack();
         frame.setLocationRelativeTo(null);
-        frame.setVisible(true);
     }
 
     private char line(Direction dir) {
-        switch (dir) {
+        switch (dir) {//╱╲─╭╮
             case LEFT:
             case RIGHT:
-                return '-';
+                return '─';
             case UP:
             case DOWN:
                 return '|';
             case UP_LEFT:
             case DOWN_RIGHT:
-                return '\\';
+                return '╲';
             case UP_RIGHT:
             case DOWN_LEFT:
-                return '/';
+                return '╱';
             default:
                 return ' ';
         }
     }
 
-    private class BallisticsSolver {
-
-        private int startX, startY, endX, endY, minY;
-        private double angle, velocity, time;
-        private double wind = 2.0, gravity = 3.0;
-
-        public BallisticsSolver(int startX, int startY, int endX, int endY) {
-            this.startX = startX;
-            this.startY = startY;
-            this.endX = endX;
-            this.endY = endY;
-        }
-
-        public void solveByVelocity(double velocity) {
-
-        }
-
-        public void solveByHeight(int targetY) {
-            double lowAngle = 0;
-            double maxHighAngle = 20;
-            double highAngle = maxHighAngle;
-            double currentAngle = (lowAngle + highAngle) / 2;
-            int lastY = Integer.MAX_VALUE;
-
-            while (true) {
-                solveByAngle(currentAngle);
-                if (minY == targetY) {
-                    break;
-                } else if (minY > targetY) {
-                    if (minY == lastY) {
-                        maxHighAngle += 5;//undershot so need to try higher angle
-                        highAngle = maxHighAngle;
-                    }
-                    lowAngle = currentAngle;
-                    currentAngle = (currentAngle + highAngle) / 2;
-                } else {//minY < targetY
-                    highAngle = currentAngle;
-                    currentAngle = (currentAngle + lowAngle) / 2;
-                }
-                lastY = minY;
-            }
-
-            System.out.println("");
-            System.out.println("-- Solved By Height for " + targetY);
-            System.out.println("Y: " + minY);
-            System.out.println("Angle: " + Math.toDegrees(angle));
-            System.out.println("Velocity: " + velocity);
-            System.out.println("Travel Time: " + time);
-        }
-
-        /**
-         * Takes an angle in degrees and figures out a velocity that will cause the trajectory to
-         * reach the target point.
-         *
-         * @param angle
-         */
-        public void solveByAngle(double angle) {
-            this.angle = Math.toRadians(angle);
-
-            double lowVelocity = 0.001, highVelocity = Double.MAX_VALUE / 2;
-            double timeStep = 0.01;
-            velocity = 20.0;
-            System.out.println("Testing velocity: " + velocity);
-            time = -timeStep;
-            int x, y;
-            minY = Integer.MAX_VALUE;
-            search:
-            while (true) {
-                time += timeStep;
-
-                x = x(time);
-                y = y(time);
-                minY = Integer.min(minY, y);
-
-                if (x == endX && y == endY) {
-                    break search;
-                } else if (x > endX) {//overshot
-                    highVelocity = velocity;
-                    velocity = (velocity + lowVelocity) / 2;
-                    System.out.println("Testing velocity: " + velocity);
-                    time = 0;
-                } else if (y > endY) {//undershot
-                    lowVelocity = velocity;
-                    velocity = (velocity + highVelocity) / 2;
-                    System.out.println("Testing velocity: " + velocity);
-                    time = 0;
-                }
-
-                if (lowVelocity == velocity || highVelocity == velocity) {
-//                    time -= timeStep;//back up one step
-                    timeStep *= 0.8;
-                    lowVelocity /= 2;
-                    highVelocity *= 2;
-                    velocity = (highVelocity + lowVelocity) / 2.0;
-                }
-
-            }
-
-            System.out.println("Time: " + time);
-            System.out.println("Y: " + minY);
-        }
-
-        public int x(double time) {
-            return (int) (startX + velocity * Math.cos(angle) * time - 0.5 * -wind * time * time);
-        }
-
-        public int y(double time) {
-            return (int) (startY + -velocity * Math.sin(angle) * time + 0.5 * gravity * time * time);
-        }
-
-    }
 }

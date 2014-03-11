@@ -21,7 +21,9 @@
             <file>file:/D:/ProjectsGit/AssaultFish/src/assaultfish/mapping/FishingMap.java</file>
             <file>file:/D:/ProjectsGit/AssaultFish/src/assaultfish/mapping/Map.java</file>
             <file>file:/D:/ProjectsGit/AssaultFish/src/assaultfish/old/physical/Condition.java</file>
+            <file>file:/D:/ProjectsGit/AssaultFish/src/assaultfish/fishing/Fish.java</file>
             <file>file:/D:/ProjectsGit/AssaultFish/src/assaultfish/old/mapping/MapFactory.java</file>
+            <file>file:/D:/ProjectsGit/AssaultFish/src/assaultfish/fishing/BallisticsSolver.java</file>
         </group>
     </open-files>
 </project-private>

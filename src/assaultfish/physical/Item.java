@@ -1,5 +1,6 @@
 package assaultfish.physical;
 
+import java.awt.Point;
 import squidpony.squidcolor.SColor;
 
 /**
@@ -13,6 +14,7 @@ public class Item {
     private String symbol;
     private Element element;
     private SColor color;
+    public Point location;
 
     public Item() {
     }
