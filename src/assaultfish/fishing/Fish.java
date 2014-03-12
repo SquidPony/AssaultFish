@@ -5,6 +5,7 @@ import assaultfish.physical.Item;
 import assaultfish.physical.Size;
 import java.awt.Font;
 import java.util.ArrayList;
+import squidpony.squidcolor.SColorFactory;
 import squidpony.squidmath.RNG;
 import squidpony.squidutility.SCollections;
 
@@ -42,7 +43,7 @@ public class Fish extends Item {
                 symbol = giant;
                 break;
         }
-
+        color = SColorFactory.lighter(element.color);
     }
 
     /**

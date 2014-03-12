@@ -44,6 +44,7 @@ public class FishingSim {
     private int width, height;
     private double wind = 10, gravity = 20;
     private Terrain terrain;
+    private Element element;
     private char bobber = '●',//O•☉✆✇♁┢Ø∅∮⊕⊖⊗⊘⊙⊚⊛⊜⊝Ⓧ◍◎●◐◑◒◓◔◕☯☮☻☺☹✪➊➋➌➍➎➏➐➑➒➓〄〇〶
             hook = 'J',
             wall = '#';
@@ -52,9 +53,6 @@ public class FishingSim {
     private SColor lineColor = SColor.BURNT_BAMBOO,
             bobberColor = SColor.SCARLET,
             hookColor = SColor.BRASS,
-            terrainBackColor = SColor.BRONZE,
-            terrainFrontColor = SColor.KHAKI,
-            liquidColor = SColor.AZUL,
             skyColor = SColor.ALICE_BLUE,
             playerColor = SColor.BETEL_NUT_DYE;
     private Font font;
@@ -62,6 +60,15 @@ public class FishingSim {
 
     private int liquidHeight;
     private int terrainWidth;
+
+    static {
+        if (SColorFactory.pallet("meter") == null) {
+            ArrayList<SColor> pallet = SColorFactory.asGradient(SColor.RED, SColor.ORANGE);
+            pallet.addAll(SColorFactory.asGradient(SColor.ORANGE, SColor.YELLOW));
+            pallet.addAll(SColorFactory.asGradient(SColor.YELLOW, SColor.ELECTRIC_GREEN));
+            SColorFactory.addPallet("meter", pallet);
+        }
+    }
 
     /**
      * Starts up a stand-alone instance for testing.
@@ -81,7 +88,16 @@ public class FishingSim {
         SGKeyListener listen = new SGKeyListener(false, SGKeyListener.CaptureType.TYPED);
         frame.addKeyListener(listen);
 
-        FishingSim sim = new FishingSim(panel, listen, 100, 60);
+        Element e = Element.getRandomElement();
+        Font font = new Font("Arial Unicode MS", Font.PLAIN, 14);
+        Fish.initSymbols(font);
+        List<Fish> fishes = new LinkedList<>();
+        for (int i = 0; i < 100; i++) {
+            Fish fish = new Fish(Size.getRandomSize(), e);
+            fishes.add(fish);
+        }
+
+        FishingSim sim = new FishingSim(panel, listen, 100, 60, fishes, Terrain.STONE, e, font);
 
         frame.pack();
         frame.setLocationRelativeTo(null);
@@ -105,23 +121,23 @@ public class FishingSim {
      * @param keys
      * @param gridWidth how wide in grid cells the sim should be
      * @param gridHeight how high in grid cells the sim should be, includes the 3-cell-high meter
+     * @param fishes
+     * @param terrain
+     * @param element
      */
-    public FishingSim(JComponent parent, SGKeyListener keys, int gridWidth, int gridHeight) {
+    public FishingSim(JComponent parent, SGKeyListener keys, int gridWidth, int gridHeight, List<Fish> fishes, Terrain terrain, Element element, Font font) {
         this.parent = parent;
         this.keys = keys;
+        this.fishes = fishes;
+        this.terrain = terrain;
+        this.element = element;
+        this.font = font;
 
         width = gridWidth;
         height = gridHeight;
         largeTextScale = 4;
         liquidHeight = largeTextScale * 4;
         terrainWidth = largeTextScale * 2 + 1;
-
-        if (SColorFactory.pallet("meter") == null) {
-            ArrayList<SColor> pallet = SColorFactory.asGradient(SColor.RED, SColor.ORANGE);
-            pallet.addAll(SColorFactory.asGradient(SColor.ORANGE, SColor.YELLOW));
-            pallet.addAll(SColorFactory.asGradient(SColor.YELLOW, SColor.ELECTRIC_GREEN));
-            SColorFactory.addPallet("meter", pallet);
-        }
 
         initFrame();
         initMap();
@@ -216,12 +232,16 @@ public class FishingSim {
 
     private void throwBobber() {
         double strength = getStrength();
-        int targetX = (int) (strength * (width - 1 - width / 3.0) + width / 3.0);//finds drop target based on strength percent
+        int targetX = (int) (strength * (width - 1 - terrainWidth * 2) + terrainWidth * 2 + 1);//finds drop target based on strength percent
         int startY = largeTextScale * 2 + 1;//start at the guy's head
         int startX = terrainWidth;//start at the shoreline
 
         BallisticsSolver solver = new BallisticsSolver(startX, startY, targetX - 1, liquidHeight - 2, wind, gravity);
-        solver.solveByHeight(2);
+        int solveHeight = width / (targetX + 5);
+        solveHeight = Integer.min(solveHeight, largeTextScale * 2 - 1);
+        solveHeight = Integer.max(solveHeight, 1);
+        System.out.println("" + solveHeight);
+        solver.solveByHeight(solveHeight);
 
         int lastX = -1, lastY = -1, bobberX = -2, bobberY = -2;
         double trueTime = solver.getTime();
@@ -264,9 +284,10 @@ public class FishingSim {
 
         double strength;
         double timeStep = 1000;//how many milliseconds per time step
-        long time = 0, lastTime = System.currentTimeMillis();
+        long time = (long) (1000 * Math.PI/2.0);
+        long lastTime = System.currentTimeMillis();
         do {
-            strength = Math.abs(Math.sin(time / timeStep));
+            strength = 1 - Math.abs(Math.sin(time / timeStep));
             int drawX = (int) (strength * (width - 3)) + 3;
             for (int x = 1; x < meterPane.getGridWidth() - 1; x++) {
                 if (x < drawX) {
@@ -311,11 +332,11 @@ public class FishingSim {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 if (terrainMap[x][y]) {
-                    pane.clearCell(x, y, SColorFactory.blend(terrainBackColor, SColorFactory.dim(terrainBackColor), PerlinNoise.noise(y, x)));
+                    pane.clearCell(x, y, getTerrainColor(x, y));
                 } else if (liquidMap[x][y]) {
-                    pane.clearCell(x, y, SColorFactory.blend(SColorFactory.blend(liquidColor, SColorFactory.dim(liquidColor), PerlinNoise.noise(x, y)), SColorFactory.dimmest(liquidColor), y / (double) (height - liquidHeight)));
+                    pane.clearCell(x, y, getLiquidColor(x, y));
                 } else {
-                    pane.clearCell(x, y, SColorFactory.blend(SColorFactory.light(skyColor), SColorFactory.dimmer(skyColor), y / (double) liquidHeight));
+                    pane.clearCell(x, y, getSkyColor(x, y));
                 }
             }
         }
@@ -329,21 +350,33 @@ public class FishingSim {
         largeTextPane.refresh();
     }
 
+    private SColor getTerrainColor(int x, int y) {
+        return SColorFactory.blend(terrain.color, SColorFactory.dim(terrain.color), PerlinNoise.noise(y, x));
+    }
+
+    private SColor getLiquidColor(int x, int y) {
+        return SColorFactory.blend(SColorFactory.blend(element.color, SColorFactory.dim(element.color), PerlinNoise.noise(x, y)), SColorFactory.dimmest(element.color), y / (double) (height - liquidHeight));
+    }
+
+    private SColor getSkyColor(int x, int y) {
+        return SColorFactory.blend(SColorFactory.light(skyColor), SColorFactory.dimmer(skyColor), y / (double) liquidHeight);
+    }
+
     private void initFish() {
         fishMap = new Fish[width][height];
 
-        for (int i = 0; i < 50; i++) {
-            Fish fish = new Fish(Size.getRandomSize(), Element.getRandomElement());
-            fishes.add(fish);
+        for (Fish fish : fishes) {
             boolean placed = false;
             while (!placed) {
-                int x = rng.between(terrainWidth + 1, width);
-                int y = rng.between(liquidHeight, bed(x));
-                if (fishMap[x][y] == null) {
-                    fishMap[x][y] = fish;
-                    fish.x = x;
-                    fish.y = y;
-                    placed = true;
+                int x = rng.between(terrainWidth * 2 + 1, width);
+                if (bed(x) > liquidHeight + 1) {
+                    int y = rng.between(liquidHeight + 1, bed(x));
+                    if (fishMap[x][y] == null) {
+                        fishMap[x][y] = fish;
+                        fish.x = x;
+                        fish.y = y;
+                        placed = true;
+                    }
                 }
             }
         }
@@ -367,10 +400,31 @@ public class FishingSim {
             }
         }
 
+        //fill in slope to liquid
+        int lastHeight = liquidHeight - largeTextScale + 1;
+        int nextHeight = liquidHeight + 1;
+        for (int x = terrainWidth; x < terrainWidth * 2; x++) {
+            int offset = rng.between(-1, 2);
+            offset *= Math.signum(nextHeight - lastHeight);
+            int terrainHeight = lastHeight + offset;
+            terrainHeight = Math.min(terrainHeight, Math.max(lastHeight, nextHeight));
+            terrainHeight = Math.max(terrainHeight, Math.min(lastHeight, nextHeight));
+            lastHeight = terrainHeight;
+            if (lastHeight == nextHeight) {
+                nextHeight = rng.between(liquidHeight + 4, height - 1);
+            }
+            for (int y = liquidHeight; y < terrainHeight; y++) {
+                liquidMap[x][y] = true;
+            }
+            for (int y = terrainHeight; y < height; y++) {
+                terrainMap[x][y] = true;
+            }
+        }
+
         //fill in rest of terrain and liquid
-        int lastHeight = liquidHeight + 3;
-        int nextHeight = rng.between(liquidHeight + 4, height - 1);
-        for (int x = terrainWidth; x < width; x++) {
+        lastHeight = liquidHeight + 2;
+        nextHeight = rng.between(liquidHeight + 4, height - 1);
+        for (int x = terrainWidth * 2; x < width; x++) {
             int offset = rng.between(-1, 2);
             offset *= Math.signum(nextHeight - lastHeight);
             int terrainHeight = lastHeight + offset;
@@ -395,7 +449,7 @@ public class FishingSim {
     private void initFrame() {
         int cellWidth = parent.getPreferredSize().width / width;
         int cellHeight = parent.getPreferredSize().height / height;
-        font = new Font("Arial Unicode MS", Font.BOLD, cellHeight + cellWidth);
+        font = new Font(font.getFontName(), Font.BOLD, cellHeight + cellWidth);
 
         Fish.initSymbols(font);
 

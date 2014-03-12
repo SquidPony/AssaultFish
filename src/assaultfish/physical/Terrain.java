@@ -9,7 +9,7 @@ import squidpony.squidcolor.SColor;
  */
 public class Terrain {
 
-    public final Terrain DIRT = new Terrain("dirt floor", ".", SColor.BRIGHT_GOLD_BROWN, false),
+    public static final Terrain DIRT = new Terrain("dirt floor", ".", SColor.BRIGHT_GOLD_BROWN, false),
             STONE = new Terrain("stone floor", ".", SColor.LIGHT_GRAY, false),
             WATER = new Terrain("water", "~", Element.WATER, true);
 
