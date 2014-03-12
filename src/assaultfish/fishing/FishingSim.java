@@ -88,7 +88,8 @@ public class FishingSim {
         SGKeyListener listen = new SGKeyListener(false, SGKeyListener.CaptureType.TYPED);
         frame.addKeyListener(listen);
 
-        Element e = Element.getRandomElement();
+//        Element e = Element.getRandomElement();
+        Element e = Element.MAGMA;
         Font font = new Font("Arial Unicode MS", Font.PLAIN, 14);
         Fish.initSymbols(font);
         List<Fish> fishes = new LinkedList<>();
@@ -191,7 +192,7 @@ public class FishingSim {
         int y;
         for (y = bobberLocation.y + 2; y <= bed(x); y++) {
             try {
-                Thread.sleep(30);
+                Thread.sleep(10);
             } catch (InterruptedException ex) {
             }
             pane.placeCharacter(x, y - 1, line(UP), lineColor);
@@ -211,7 +212,7 @@ public class FishingSim {
             y--;
             pane.placeCharacter(x, y, hook, hookColor);
             if (fish != null) {
-                pane.placeCharacter(x, y, fish.getSymbol().charAt(0), fish.getColor());
+                pane.placeCharacter(x, y, fish.symbol.charAt(0), fish.color);
             } else if (fishMap[x][y] != null) {
                 fish = fishMap[x][y];
                 fishes.remove(fish);
@@ -222,7 +223,7 @@ public class FishingSim {
             pane.refresh();
 
             try {
-                Thread.sleep(50);
+                Thread.sleep(40);
             } catch (InterruptedException ex) {
             }
         } while (y > bobberLocation.y + 1);
@@ -245,7 +246,7 @@ public class FishingSim {
 
         int lastX = -1, lastY = -1, bobberX = -2, bobberY = -2;
         double trueTime = solver.getTime();
-        int targetTime = targetX * 20;//in milliseconds
+        int targetTime = targetX * 15;//in milliseconds
         long lastTime;
         for (double time = 0; time <= targetTime; time += System.currentTimeMillis() - lastTime) {
             lastTime = System.currentTimeMillis();
@@ -284,16 +285,20 @@ public class FishingSim {
 
         double strength;
         double timeStep = 1000;//how many milliseconds per time step
-        long time = (long) (1000 * Math.PI/2.0);
+        long time = (long) (1000 * Math.PI / 2.0);
+        int meterOffset = 3;
+        int meterSize = width - meterOffset * 2;
+
         long lastTime = System.currentTimeMillis();
         do {
             strength = 1 - Math.abs(Math.sin(time / timeStep));
-            int drawX = (int) (strength * (width - 3)) + 3;
-            for (int x = 1; x < meterPane.getGridWidth() - 1; x++) {
-                if (x < drawX) {
-                    meterPane.placeCharacter(x, 1, '●', SColorFactory.fromPallet("meter", x / (float) (meterPane.getGridWidth())));
+            int drawX = (int) (strength * meterSize);
+            drawX = Math.min(drawX, meterSize);//make sure rare case of strength 1 doesn't cause problems
+            for (int i = 0; i < meterSize; i++) {
+                if (i < drawX) {
+                    meterPane.placeCharacter(i + meterOffset, 1, '●', SColorFactory.fromPallet("meter", i / (float) (meterSize)));
                 } else {
-                    meterPane.clearCell(x, 1);
+                    meterPane.clearCell(i + meterOffset, 1);
                 }
             }
             meterPane.refresh();
@@ -342,7 +347,7 @@ public class FishingSim {
         }
 
         for (Fish f : fishes) {
-            fishPane.placeCharacter(f.x, f.y, f.getSymbol().charAt(0), f.getColor());
+            fishPane.placeCharacter(f.x, f.y, f.symbol.charAt(0), f.color);
         }
 
         fishPane.refresh();
@@ -359,7 +364,7 @@ public class FishingSim {
     }
 
     private SColor getSkyColor(int x, int y) {
-        return SColorFactory.blend(SColorFactory.light(skyColor), SColorFactory.dimmer(skyColor), y / (double) liquidHeight);
+        return SColorFactory.blend(SColorFactory.lightest(skyColor), SColorFactory.dim(skyColor), y / (double) liquidHeight);
     }
 
     private void initFish() {

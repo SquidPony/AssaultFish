@@ -157,7 +157,7 @@ public class AssaultFish {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
 //                map[x][y].setSeen(true);//uncomment this to see the fully generated map rather than the player's view
-                mapPanel.placeCharacter(x, y, map[x][y].getSymbol().charAt(0), map[x][y].color());
+                mapPanel.placeCharacter(x, y, map[x][y].getSymbol().charAt(0), map[x][y].foregroundColor());
             }
         }
 

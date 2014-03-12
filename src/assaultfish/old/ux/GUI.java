@@ -1703,7 +1703,7 @@ public class GUI {
                 if (rep != null) {
                     disp = rep;
                 }
-                view.placeCharacter(x, y, disp, map.map[x][y].color());
+                view.placeCharacter(x, y, disp, map.map[x][y].foregroundColor());
 
                 Creature c = map.map[x][y].creature;//player can hear creature when it first comes range and not yet heard
                 if (c != null && c != player && !c.heard) {

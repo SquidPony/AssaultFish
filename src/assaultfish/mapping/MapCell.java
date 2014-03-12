@@ -4,22 +4,19 @@ import assaultfish.physical.Item;
 import assaultfish.physical.Monster;
 import assaultfish.physical.Terrain;
 import assaultfish.physical.TerrainFeature;
-import java.util.ArrayList;
-import java.util.Arrays;
 import squidpony.squidcolor.SColor;
 import squidpony.squidcolor.SColorFactory;
-import squidpony.squidgrid.util.Direction;
 
 /**
  * Represents a single square in the game world.
  *
  * @author Eben Howard - http://squidpony.com - howard@squidpony.com
  */
-public class MapCell{
+public class MapCell {
 
     public Monster creature;
     public Terrain terrain;
-    public ArrayList<TerrainFeature> features;
+    public TerrainFeature feature;
     public Item item;
     public SColor light = SColor.BLACK;
     public boolean seen = false;
@@ -31,44 +28,34 @@ public class MapCell{
         terrain = t;
     }
 
-    public MapCell(Terrain t, TerrainFeature... f) {
-        terrain = t;
-        features.addAll(Arrays.asList(f));
+    public MapCell(Terrain treasure, TerrainFeature feature) {
+        this.terrain = treasure;
+        this.feature = feature;
     }
 
-    @Override
-    public float resistance(String key) {
-        switch (key) {
-            case "movement":
-                if (feature == null) {
-                    return terrain.blocking ? 1f : 0f;
+    public SColor backgroundColor() {
+        if (light.equals(SColor.BLACK)) {
+            if (seen) {
+                if (feature != null) {
+                    return SColorFactory.blend(SColorFactory.desaturated(feature.color), SColor.BLACK, 0.75f);
                 } else {
-                    return terrain.blocking || feature.blocking ? 1f : 0f;
+                    return SColorFactory.blend(SColorFactory.desaturated(terrain.color), SColor.BLACK, 0.75f);
                 }
-            case "sight":
-                if (feature == null) {
-                    return 0f;
-                } else {
-                    return feature.opacity;
-                }
-            default:
-                return 1f;
+            } else {
+                return light;
+            }
         }
+
+        return SColorFactory.lightWith(feature == null ? terrain.color : feature.color, light);
     }
 
-    public SColor color() {
+    public SColor foregroundColor() {
         //unlit
         if (light.equals(SColor.BLACK)) {
-            if (seen) {//previously seen
-                if (item != null) {
-                    return SColorFactory.blend(SColorFactory.desaturated(item.getColor()), SColor.BLACK, 0.75f);
-                } else if (feature != null) {
-                    return SColorFactory.blend(SColorFactory.desaturated(feature.getColor()), SColor.BLACK, 0.75f);
-                } else {
-                    return SColorFactory.blend(SColorFactory.desaturated(terrain.getColor()), SColor.BLACK, 0.75f);
-                }
+            if (seen && (creature != null || item != null)) {//previously seen
+                return SColorFactory.blend(SColorFactory.desaturated(item == null ? creature.color : item.getColor()), SColor.BLACK, 0.75f);
             }
-            return SColor.BLACK;//nothing to see
+            return SColor.TRANSPARENT;//nothing to see
         }
 
         //lit
@@ -81,10 +68,8 @@ public class MapCell{
             if (seen) {
                 if (item != null) {
                     return item.getSymbol();
-                } else if (feature != null) {
-                    return feature.getSymbol();
                 } else {
-                    return terrain.getSymbol();
+                    return terrain.symbol;
                 }
             }
             return " ";//nothing to see

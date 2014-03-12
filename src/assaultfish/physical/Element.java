@@ -15,12 +15,13 @@ public enum Element {
     ACID("acid", "acidic", SColor.CHARTREUSE),
     TAR("tar", "tarred", SColor.STOREROOM_BROWN),
     SAND("sand", "sandy", SColor.KHAKI),
-    MAGMA("magma", "heated", SColor.SCARLET),
+    BLOOD("blood", "bloody", SColor.SCARLET),
+    MAGMA("magma", "heated", SColor.SAFETY_ORANGE),
     MANA("mana", "enchanted", SColor.ROYAL_PURPLE),
     NONE("none", "", SColor.GRAY);
 
-    public String name, adjective;
-    public SColor color;
+    public final String name, adjective;
+    public final SColor color;
 
     private Element(String name, String adjective, SColor color) {
         this.name = name;
@@ -34,7 +35,7 @@ public enum Element {
      * @return
      */
     public static Element getRandomElement() {
-        return new RNG().getRandomElement(new Element[]{WATER, AIR, ACID, TAR, SAND, MAGMA, MANA});
+        return new RNG().getRandomElement(new Element[]{WATER, AIR, ACID, TAR, SAND, MAGMA, MANA, BLOOD});
     }
 
 }

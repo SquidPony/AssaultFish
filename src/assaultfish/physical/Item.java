@@ -26,10 +26,11 @@ public class Item {
      * @param symbol
      * @param element
      */
-    public Item(String name,  String symbol, Element element) {
-        this.name = name;
+    public Item(String name, String symbol, Element element) {
+        this.name = (element == null || element == Element.NONE ? "" : element.adjective + " ") + name;
         this.symbol = symbol;
         this.element = element;
+        color = element.color;
     }
 
     /**
@@ -40,27 +41,16 @@ public class Item {
      * @param color
      */
     public Item(String name, String symbol, SColor color) {
-        this.name = name;
+        this.name = (element == null || element == Element.NONE ? "" : element.adjective + " ") + name;
         this.symbol = symbol;
         this.color = color;
+        element = Element.NONE;
     }
 
     public Item(Item other) {
         name = other.name;
         symbol = other.symbol;
         element = other.element;
+        color = other.color;
     }
-
-    public String getSymbol() {
-        return symbol;
-    }
-
-    public SColor getColor() {
-        return element == null ? color : element.color;
-    }
-
-    public String getDisplayName() {
-        return (element == null ? "" : element.adjective + " ") + name;
-    }
-
 }
