@@ -1,13 +1,13 @@
 package assaultfish.mapping;
 
-import assaultfish.physical.Creature;
 import assaultfish.physical.Item;
+import assaultfish.physical.Monster;
 import assaultfish.physical.Terrain;
 import assaultfish.physical.TerrainFeature;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Arrays;
 import squidpony.squidcolor.SColor;
 import squidpony.squidcolor.SColorFactory;
-import squidpony.squidgrid.fov.FOVCell;
 import squidpony.squidgrid.util.Direction;
 
 /**
@@ -15,15 +15,26 @@ import squidpony.squidgrid.util.Direction;
  *
  * @author Eben Howard - http://squidpony.com - howard@squidpony.com
  */
-public class MapCell implements FOVCell {
+public class MapCell{
 
-    public Creature creature;
+    public Monster creature;
     public Terrain terrain;
-    public TerrainFeature feature;
+    public ArrayList<TerrainFeature> features;
     public Item item;
     public SColor light = SColor.BLACK;
     public boolean seen = false;
-    private final HashMap<String, Float> fov = new HashMap<>();
+
+    public MapCell() {
+    }
+
+    public MapCell(Terrain t) {
+        terrain = t;
+    }
+
+    public MapCell(Terrain t, TerrainFeature... f) {
+        terrain = t;
+        features.addAll(Arrays.asList(f));
+    }
 
     @Override
     public float resistance(String key) {
@@ -43,21 +54,6 @@ public class MapCell implements FOVCell {
             default:
                 return 1f;
         }
-    }
-
-    @Override
-    public float resistance(String key, Direction direction) {
-        return resistance(key);
-    }
-
-    @Override
-    public void setFOVResult(String key, float value) {
-        fov.put(key, value);
-    }
-
-    @Override
-    public void setFOVResult(String key, Direction direction, float value) {
-        fov.put(key, value);
     }
 
     public SColor color() {

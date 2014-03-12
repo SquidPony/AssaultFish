@@ -1,4 +1,4 @@
-package assaultfish;
+package assaultfish.physical;
 
 import squidpony.squidcolor.SColor;
 
@@ -7,17 +7,13 @@ import squidpony.squidcolor.SColor;
  *
  * @author Eben Howard
  */
-public class Monster {
+public class Monster extends Item {
 
     public static final Monster //this is a list of the various monster templatespublic static final Monster //this is a list of the various monster templates
-            SNOWMAN = new Monster("snowman", 5, '☃', SColor.ALICE_BLUE),
-            PLAYER = new Monster("player", 10, '☺', SColor.BRIGHT_TURQUOISE);
+            SNOWMAN = new Monster("snowman", 5, "☃", SColor.ALICE_BLUE),
+            PLAYER = new Monster("player", 10, "☺", SColor.BRIGHT_TURQUOISE);
 
-    private final String name;
-    private int health;
-    private final char symbol;
-    private final SColor color;
-    public int x, y;
+    public int health;
 
     /**
      * Creates a new monster.
@@ -27,11 +23,9 @@ public class Monster {
      * @param symbol
      * @param color
      */
-    public Monster(String name, int health, char symbol, SColor color) {
-        this.name = name;
+    public Monster(String name, int health, String symbol, SColor color) {
+        super(name,  symbol, color);
         this.health = health;
-        this.symbol = symbol;
-        this.color = color;
     }
 
     /**
@@ -40,23 +34,12 @@ public class Monster {
      * @param other
      */
     public Monster(Monster other) {
-        this(other.name, other.health, other.symbol, other.color);
-    }
-
-    public String getName() {
-        return name;
+        super(other);
+        this.health = other.health;
     }
 
     public int getHealth() {
         return health;
-    }
-
-    public char getSymbol() {
-        return symbol;
-    }
-
-    public SColor getColor() {
-        return color;
     }
 
     /**
@@ -83,7 +66,7 @@ public class Monster {
 
     @Override
     public int hashCode() {
-        return name.hashCode() + symbol + color.hashCode();
+        return name.hashCode() + symbol.codePointAt(0) + color.hashCode();
     }
 
 }

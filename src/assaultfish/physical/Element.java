@@ -1,6 +1,7 @@
 package assaultfish.physical;
 
 import squidpony.squidcolor.SColor;
+import squidpony.squidmath.RNG;
 
 /**
  * The types of base elements in the world.
@@ -15,7 +16,8 @@ public enum Element {
     TAR("tar", "tarred", SColor.STOREROOM_BROWN),
     SAND("sand", "sandy", SColor.KHAKI),
     MAGMA("magma", "heated", SColor.SCARLET),
-    MANA("mana", "enchanted", SColor.ROYAL_PURPLE);
+    MANA("mana", "enchanted", SColor.ROYAL_PURPLE),
+    NONE("none", "", SColor.GRAY);
 
     public String name, adjective;
     public SColor color;
@@ -24,6 +26,15 @@ public enum Element {
         this.name = name;
         this.adjective = adjective;
         this.color = color;
+    }
+
+    /**
+     * Will return a random element of all possible elements except "NONE".
+     *
+     * @return
+     */
+    public static Element getRandomElement() {
+        return new RNG().getRandomElement(new Element[]{WATER, AIR, ACID, TAR, SAND, MAGMA, MANA});
     }
 
 }

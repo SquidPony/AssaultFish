@@ -1,42 +1,36 @@
-package assaultfish;
+package assaultfish.physical;
+
+import squidpony.squidcolor.SColor;
 
 /**
  * This class represents some item of treasure found in the game.
  *
  * @author Eben Howard
  */
-public class Treasure implements Comparable<Treasure> {
+public class Treasure extends Item implements Comparable<Treasure> {
 
-    public static final Treasure GEMSTONE = new Treasure("gem", 1000),
-            MONEY_BAG = new Treasure("money bag", 200),
-            POO = new Treasure("poo", 1);
+    public static final Treasure GEMSTONE = new Treasure("emerald", 1000, SColor.EMERALD),
+            MONEY_BAG = new Treasure("money bag", 200, SColor.BROWNER),
+            POO = new Treasure("poo", 1, SColor.BROWNER);
     public static final Treasure[] PROTOTYPES = new Treasure[]{GEMSTONE, MONEY_BAG, POO};
 
-    private final String name;
-    private final int value;
+    public int value;
 
     /**
      * Creates a treasure with the provided name and value.
      *
      * @param name
      * @param value
+     * @param color
      */
-    public Treasure(String name, int value) {
-        this.name = name;
+    public Treasure(String name, int value, SColor color) {
+        super(name, "$", color);
         this.value = value;
     }
 
     public Treasure(Treasure other) {
-        name = other.name;
+        super(other);
         value = other.value;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public int getValue() {
-        return value;
     }
 
     @Override

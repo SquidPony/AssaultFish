@@ -4,28 +4,29 @@ import squidpony.squidcolor.SColor;
 
 /**
  * Represents something that can sit in a map space but is not the terrain itself, a monster, or an
- * item. This includes things like doors, piles of junk, and low brush.
+ * item. This includes things like doors, piles of junk, and low brush. They may be interacted with
+ * but not picked up.
  *
  * @author Eben Howard - http://squidpony.com - howard@squidpony.com
  */
 public class TerrainFeature extends Item {
 
-    public static final TerrainFeature STONE_WALL = new TerrainFeature("stone wall", "A wall which blocks movement.", '#', SColor.SILVER, true, 1.0f),
-            DIRT_WALL = new TerrainFeature("dirt wall", "A wall which blocks movement.", '#', SColor.RUSSET, true, 1.0f),
-            TAR_MOUND = new TerrainFeature("tar mound", "A small mound of tar.", 'm', Element.TAR, true, 0.1f);
+    public static final TerrainFeature STONE_WALL = new TerrainFeature("stone wall", "#", SColor.SILVER, true, true),
+            DIRT_WALL = new TerrainFeature("dirt wall", "#", SColor.RUSSET, true, true),
+            TAR_MOUND = new TerrainFeature("tar mound", "m", Element.TAR, true, false);
     public boolean blocking;
-    public float opacity;
+    public boolean opaque;
 
-    public TerrainFeature(String name, String description, int symbol, Element element, boolean blocking, float opacity) {
-        super(name, description, symbol, element);
+    public TerrainFeature(String name, String symbol, Element element, boolean blocking, boolean opaque) {
+        super(name,  symbol, element);
         this.blocking = blocking;
-        this.opacity = opacity;
+        this.opaque = opaque;
     }
 
-    public TerrainFeature(String name, String description, int symbol, SColor color, boolean blocking, float opacity) {
-        super(name, description, symbol, color);
+    public TerrainFeature(String name, String symbol, SColor color, boolean blocking, boolean opaque) {
+        super(name,  symbol, color);
         this.blocking = blocking;
-        this.opacity = opacity;
+        this.opaque = opaque;
     }
 
     /**
@@ -35,7 +36,11 @@ public class TerrainFeature extends Item {
      * @return
      */
     public static TerrainFeature createElementalWall(Element e) {
-        return new TerrainFeature(e.name + " wall", "A stabalized " + e.adjective + " wall.", '#', e, true, 1.0f);
+        return new TerrainFeature(e.name + " wall", "#", e, true, true);
+    }
+
+    public static TerrainFeature createElementalPuddle(Element e) {
+        return new TerrainFeature(e.name + " wall", "#", e, true, true);
     }
 
     /**
@@ -45,6 +50,6 @@ public class TerrainFeature extends Item {
      * @return
      */
     public static TerrainFeature createBones(String s) {
-        return new TerrainFeature("pile of " + s + " bones", "A scattered pile of " + s + " bones.", '%', SColor.EGGSHELL_PAPER, false, 0.0f);
+        return new TerrainFeature("pile of " + s + " bones", "%", SColor.EGGSHELL_PAPER, false, false);
     }
 }

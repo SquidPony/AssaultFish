@@ -1,10 +1,12 @@
 package assaultfish;
 
+import assaultfish.physical.Treasure;
+import assaultfish.physical.Monster;
+import assaultfish.mapping.MapCell;
 import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.Point;
 import static java.awt.event.KeyEvent.*;
-import static squidpony.squidgrid.util.Direction.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -19,6 +21,7 @@ import squidpony.squidgrid.gui.awt.TextCellFactory;
 import squidpony.squidgrid.gui.awt.event.SGKeyListener;
 import squidpony.squidgrid.gui.swing.SwingPane;
 import squidpony.squidgrid.util.Direction;
+import static squidpony.squidgrid.util.Direction.*;
 
 /**
  * This class starts up the game.
@@ -27,6 +30,7 @@ import squidpony.squidgrid.util.Direction;
  */
 public class AssaultFish {
 
+    private static final String version = "1.1";
     private static final int width = 50, height = 30, statWidth = 12, fontSize = 22, outputLines = 1;
     private static final int minimumRoomSize = 3;
     private static final String fishingPole = "🎣",//fishing pole and fish
@@ -49,7 +53,7 @@ public class AssaultFish {
     private int playerStrength = 7;
     private ArrayList<Monster> monsters = new ArrayList<>();
     private ArrayList<Treasure> treasuresFound = new ArrayList<>();
-    private Tile[][] map;
+    private MapCell[][] map;
 
     /**
      * @param args the command line arguments
@@ -71,7 +75,7 @@ public class AssaultFish {
         createMap();
         updateMap();
         updateStats();
-        printOut("Welcome to the Snowman Demo Game!");
+        printOut("Welcome to Assault Fish!    This is version " + version);
 
         while (true) {
             runTurn();
@@ -117,19 +121,19 @@ public class AssaultFish {
      * @return
      */
     private boolean tryToMove(Direction dir) {
-        Tile tile = map[player.x + dir.deltaX][player.y + dir.deltaY];
-        if (tile.isWall()) {
+        MapCell tile = map[player.x + dir.deltaX][player.y + dir.deltaY];
+        if (tile.resistance("movement") >= 1) {
             return false;
         }
 
-        Monster monster = tile.getMonster();
+        Monster monster = tile.creature;
         if (monster == null) {//move the player
-            map[player.x][player.y].setMonster(null);
+            map[player.x][player.y].creature = null;
             mapPanel.slide(new Point(player.x, player.y), dir);
             mapPanel.waitForAnimations();
             player.x += dir.deltaX;
             player.y += dir.deltaY;
-            map[player.x][player.y].setMonster(player);
+            map[player.x][player.y].creature = player;
             return true;
         } else {//attack!
             mapPanel.bump(new Point(player.x, player.y), dir);
@@ -137,8 +141,8 @@ public class AssaultFish {
             boolean dead = monster.causeDamage(playerStrength);
             if (dead) {
                 monsters.remove(monster);
-                map[player.x + dir.deltaX][player.y + dir.deltaY].setMonster(null);//no more monster
-                printOut("Killed the " + monster.getName());
+                map[player.x + dir.deltaX][player.y + dir.deltaY].creature = null;
+                printOut("Killed the " + monster.name);
             }
             return true;
         }
@@ -153,7 +157,7 @@ public class AssaultFish {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
 //                map[x][y].setSeen(true);//uncomment this to see the fully generated map rather than the player's view
-                mapPanel.placeCharacter(x, y, map[x][y].getSymbol(), map[x][y].getColor());
+                mapPanel.placeCharacter(x, y, map[x][y].getSymbol().charAt(0), map[x][y].color());
             }
         }
 
@@ -203,60 +207,20 @@ public class AssaultFish {
         boolean[][] walls = new boolean[width][height];
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                walls[x][y] = map[x][y].isWall();
+                walls[x][y] = map[x][y].resistance("movement") >= 1;
             }
         }
         fov.calculateFOV(walls, player.x, player.y, width + height);
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                map[x][y].setSeen(fov.isLit(x, y));
+                map[x][y].seen = fov.isLit(x, y);
             }
         }
     }
 
-    /**
-     * Creates the map to contain random bits of wall
-     */
+  
     private void createMap() {
-        map = new Tile[width][height];
-
-        //make all the edges into walls
-        for (int x = 0; x < width; x++) {
-            map[x][0] = new Tile(true);
-            map[x][height - 1] = new Tile(true);
-        }
-        for (int y = 0; y < height; y++) {
-            map[0][y] = new Tile(true);
-            map[width - 1][y] = new Tile(true);
-        }
-
-        //fill the rest in with floor
-        for (int x = 1; x < width - 1; x++) {
-            for (int y = 1; y < height - 1; y++) {
-                map[x][y] = new Tile();
-            }
-        }
-
-        //randomly place some chunks of wall
-        for (int i = 0; i < 10; i++) {
-            placeWallChunk();
-        }
-
-        //randomly place the player
-        placeMonster(player);
-
-        //randomly place some monsters
-        for (int i = 0; i < 30; i++) {
-            placeMonster(new Monster(Monster.SNOWMAN));
-        }
-
-        for (int i = 0; i < 20; i++) {
-            placeTreasure(new Treasure("Chocolate Coin", 1));
-        }
-
-        for (int i = 0; i < 10; i++) {
-            placeTreasure(new Treasure("Coal", 0));
-        }
+        map = new MapCell[width][height];
 
     }
 

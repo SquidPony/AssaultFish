@@ -1,5 +1,7 @@
 package assaultfish.fishing;
 
+import assaultfish.physical.Element;
+import assaultfish.physical.Size;
 import assaultfish.physical.Terrain;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -67,6 +69,7 @@ public class FishingSim {
      * @param args
      */
     public static void main(String... args) {
+
         JFrame frame = new JFrame("Fishing Prototype");
         frame.setBackground(SColor.BLACK);
         frame.getContentPane().setBackground(SColor.BLACK);
@@ -88,7 +91,7 @@ public class FishingSim {
 
         System.out.println("Fish Caught");
         for (Fish f : creel) {
-            System.out.println(f);
+            System.out.println(f.name);
         }
     }
 
@@ -318,7 +321,7 @@ public class FishingSim {
         }
 
         for (Fish f : fishes) {
-            fishPane.placeCharacter(f.location.x, f.location.y, f.getSymbol().charAt(0), f.getColor());
+            fishPane.placeCharacter(f.x, f.y, f.getSymbol().charAt(0), f.getColor());
         }
 
         fishPane.refresh();
@@ -330,7 +333,7 @@ public class FishingSim {
         fishMap = new Fish[width][height];
 
         for (int i = 0; i < 50; i++) {
-            Fish fish = new Fish(Fish.fishSymbols.charAt(rng.nextInt(Fish.fishSymbols.length())));
+            Fish fish = new Fish(Size.getRandomSize(), Element.getRandomElement());
             fishes.add(fish);
             boolean placed = false;
             while (!placed) {
@@ -338,7 +341,8 @@ public class FishingSim {
                 int y = rng.between(liquidHeight, bed(x));
                 if (fishMap[x][y] == null) {
                     fishMap[x][y] = fish;
-                    fish.location = new Point(x, y);
+                    fish.x = x;
+                    fish.y = y;
                     placed = true;
                 }
             }
@@ -392,6 +396,8 @@ public class FishingSim {
         int cellWidth = parent.getPreferredSize().width / width;
         int cellHeight = parent.getPreferredSize().height / height;
         font = new Font("Arial Unicode MS", Font.BOLD, cellHeight + cellWidth);
+
+        Fish.initSymbols(font);
 
         JLayeredPane layers = new JLayeredPane();
         parent.setLayout(new BorderLayout());
