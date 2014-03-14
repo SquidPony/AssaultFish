@@ -96,7 +96,7 @@ public class BallisticsSolver {
             time += timeStep;
             x = x(time);
             y = y(time);
-            minY = Integer.min(minY, y);
+            minY = Math.min(minY, y);
             if (x == endX && y == endY) {
                 break;
             } else if (x > endX) {

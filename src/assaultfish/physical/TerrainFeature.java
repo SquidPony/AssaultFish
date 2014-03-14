@@ -13,18 +13,19 @@ public class TerrainFeature extends Item {
 
     public static final TerrainFeature STONE_WALL = new TerrainFeature("stone wall", "#", SColor.SILVER, true, true),
             DIRT_WALL = new TerrainFeature("dirt wall", "#", SColor.RUSSET, true, true),
-            TREE = new TerrainFeature("tree", "T", SColor.FOREST_GREEN, true, false);
+            TREE = new TerrainFeature("tree", "T", SColor.FOREST_GREEN, true, true),
+            BUSH = new TerrainFeature("bush", ",", SColor.KELLY_GREEN, true, false);
     public boolean blocking;
     public boolean opaque;
 
     public TerrainFeature(String name, String symbol, Element element, boolean blocking, boolean opaque) {
-        super(name,  symbol, element);
+        super(name, symbol, element);
         this.blocking = blocking;
         this.opaque = opaque;
     }
 
     public TerrainFeature(String name, String symbol, SColor color, boolean blocking, boolean opaque) {
-        super(name,  symbol, color);
+        super(name, symbol, color);
         this.blocking = blocking;
         this.opaque = opaque;
     }
