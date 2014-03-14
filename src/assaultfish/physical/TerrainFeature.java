@@ -13,7 +13,7 @@ public class TerrainFeature extends Item {
 
     public static final TerrainFeature STONE_WALL = new TerrainFeature("stone wall", "#", SColor.SILVER, true, true),
             DIRT_WALL = new TerrainFeature("dirt wall", "#", SColor.RUSSET, true, true),
-            TAR_MOUND = new TerrainFeature("tar mound", "m", Element.TAR, true, false);
+            TREE = new TerrainFeature("tree", "T", SColor.FOREST_GREEN, true, false);
     public boolean blocking;
     public boolean opaque;
 
@@ -40,7 +40,7 @@ public class TerrainFeature extends Item {
     }
 
     public static TerrainFeature createElementalPuddle(Element e) {
-        return new TerrainFeature(e.name + " wall", "#", e, true, true);
+        return new TerrainFeature(e.name + " puddle", "m", e, true, true);
     }
 
     /**

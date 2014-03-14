@@ -1,4 +1,4 @@
-package assaultfish.fishing;
+package assaultfish.physical;
 
 import assaultfish.physical.Element;
 import assaultfish.physical.Item;
@@ -21,8 +21,11 @@ public class Fish extends Item {
             group3 = "ᾶᾱᾰἅἄἃἂἁἀά",
             group4 = "ᾳαάὰ";
     public static String small, medium, large, giant;
+    public Size size;
 
     public Fish(Size size, Element element) {
+        this.size = size;
+        this.element = element;
         name = element.adjective;
         symbol = "X";
         switch (size) {
@@ -44,6 +47,22 @@ public class Fish extends Item {
                 break;
         }
         color = SColorFactory.lighter(element.color);
+    }
+
+    public static String symbol(Size size) {
+
+        switch (size) {
+            case SMALL:
+                return small;
+            case MEDIUM:
+                return medium;
+            case LARGE:
+                return large;
+            case GIANT:
+                return giant;
+            default:
+                return "x";
+        }
     }
 
     /**

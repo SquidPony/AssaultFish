@@ -7,13 +7,13 @@ import squidpony.squidcolor.SColor;
  *
  * @author Eben Howard
  */
-public class Monster extends Item {
+public class Creature extends Item {
 
-    public static final Monster //this is a list of the various monster templatespublic static final Monster //this is a list of the various monster templates
-            SNOWMAN = new Monster("snowman", 5, "☃", SColor.ALICE_BLUE),
-            PLAYER = new Monster("player", 10, "☺", SColor.BRIGHT_TURQUOISE);
+    public static final Creature //this is a list of the various monster templatespublic static final Monster //this is a list of the various monster templatespublic static final Creature //this is a list of the various monster templatespublic static final Monster //this is a list of the various monster templates
+            SNOWMAN = new Creature("snowman", 5, "☃", SColor.ALICE_BLUE),
+            PLAYER = new Creature("player", 10, "☺", SColor.BRIGHT_TURQUOISE);
 
-    public int health;
+    public int health, strength;
 
     /**
      * Creates a new monster.
@@ -23,7 +23,7 @@ public class Monster extends Item {
      * @param symbol
      * @param color
      */
-    public Monster(String name, int health, String symbol, SColor color) {
+    public Creature(String name, int health, String symbol, SColor color) {
         super(name,  symbol, color);
         this.health = health;
     }
@@ -33,7 +33,7 @@ public class Monster extends Item {
      *
      * @param other
      */
-    public Monster(Monster other) {
+    public Creature(Creature other) {
         super(other);
         this.health = other.health;
     }
@@ -61,7 +61,7 @@ public class Monster extends Item {
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof Monster ? ((Monster) obj).name.equals(name) : false;
+        return obj instanceof Creature ? ((Creature) obj).name.equals(name) : false;
     }
 
     @Override

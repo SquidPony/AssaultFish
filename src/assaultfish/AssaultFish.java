@@ -1,27 +1,50 @@
 package assaultfish;
 
-import assaultfish.physical.Treasure;
-import assaultfish.physical.Monster;
 import assaultfish.mapping.MapCell;
+import assaultfish.physical.BallisticsSolver;
+import assaultfish.physical.Fish;
+import assaultfish.physical.Creature;
+import assaultfish.physical.Element;
+import assaultfish.physical.Size;
+import assaultfish.physical.Terrain;
+import assaultfish.physical.TerrainFeature;
+import assaultfish.physical.Treasure;
+import com.sun.javafx.tk.RenderJob;
 import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.Point;
-import static java.awt.event.KeyEvent.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Random;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.TreeMap;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
+import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.event.MouseInputAdapter;
 import squidpony.squidcolor.SColor;
+import squidpony.squidcolor.SColorFactory;
 import squidpony.squidgrid.fov.FOVTranslator;
 import squidpony.squidgrid.fov.ShadowFOV;
 import squidpony.squidgrid.gui.awt.TextCellFactory;
-import squidpony.squidgrid.gui.awt.event.SGKeyListener;
 import squidpony.squidgrid.gui.swing.SwingPane;
+import squidpony.squidgrid.los.LOSSolver;
+import squidpony.squidgrid.util.BasicRadiusStrategy;
 import squidpony.squidgrid.util.Direction;
 import static squidpony.squidgrid.util.Direction.*;
+import squidpony.squidgrid.util.RadiusStrategy;
+import squidpony.squidmath.PerlinNoise;
+import squidpony.squidmath.RNG;
 
 /**
  * This class starts up the game.
@@ -30,56 +53,132 @@ import static squidpony.squidgrid.util.Direction.*;
  */
 public class AssaultFish {
 
-    private static final String version = "1.1";
-    private static final int width = 50, height = 30, statWidth = 12, fontSize = 22, outputLines = 1;
-    private static final int minimumRoomSize = 3;
-    private static final String fishingPole = "🎣",//fishing pole and fish
-            whale = "🐋",//whale
-            octopus = "🐙",//octopus
-            fish = "🐟",//fish
-            tropicalFish = "🐠",//tropical fish
-            blowfish = "🐡",//blowfish
-            spoutingWhale = "🐳",//spouting whale
-            gemstone = "💎",//gemstone
-            moneyBag = "💰";//money bag
+    private static final int width = 90, height = 35, fishHeight = (height - 3) * 2, fishWidth = width * 2, fontSize = 20;
+    private static final int largeTextScale = 4, liquidHeight = largeTextScale * 4, terrainWidth = largeTextScale * 2 + 1;
+    private static final int maxFish = 6;
+    private static final Font font = new Font("Arial Unicode MS", Font.PLAIN, fontSize);
+    private static final String version = "1.0";
 
+//    private static final String fishingPole = "🎣",//fishing pole and fish
+//            whale = "🐋",//whale
+//            octopus = "🐙",//octopus
+//            //fish = "🐟",//fish
+//            tropicalFish = "🐠",//tropical fish
+//            blowfish = "🐡",//blowfish
+//            spoutingWhale = "🐳",//spouting whale
+//            gemstone = "💎",//gemstone
+//            moneyBag = "💰";//money bag
     private final FOVTranslator fov = new FOVTranslator(new ShadowFOV());
-    private final Random rng = new squidpony.squidmath.RNG();
+    private final LOSSolver los = new squidpony.squidgrid.los.BresenhamLOS();
+    private final RNG rng = new squidpony.squidmath.RNG();
+
+    private TextCellFactory textFactory;
+    private TextCellFactory fishText;
+
     private JFrame frame;
-    private JPanel panel;
-    private SwingPane mapPanel, statsPanel, outputPanel;
-    private SGKeyListener keyListener;
-    private Monster player;
-    private int playerStrength = 7;
-    private ArrayList<Monster> monsters = new ArrayList<>();
-    private ArrayList<Treasure> treasuresFound = new ArrayList<>();
+    private SwingPane mapPanel, outputPanel, meterPanel, fishingViewPanel, fishPane, largeTextPane;
+    private JPanel fishingMasterPanel;
+    private JLayeredPane layers;
+    private final MeterListener meterListener = new MeterListener();
+    private FishMouse fishMouse = new FishMouse();
+    private MapMouse mapMouse;
+    private FishInventoryMouse inventoryMouse;
+
+    private Creature player;
+
+    private final ArrayList<Creature> monsters = new ArrayList<>();
+    private final ArrayList<Treasure> treasuresFound = new ArrayList<>();
     private MapCell[][] map;
+
+    private Fish selectedFish = null;
+    private SwingPane overlayPanel;
+    private final Point overlayLocation = new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
+
+    private final TreeMap<Element, TreeMap<Size, Integer>> fishInventory = new TreeMap<>();
+    private final HashMap<Point, String> inventoryPopup = new HashMap<>();
+    private SwingPane fishInventoryPanel;
+
+    private boolean casting = false;
+    private double castingStrength = 0.4;
+
+    /* ------------------ From FishingPanel ------------------------- */
+    private boolean[][] terrainMap;
+    private boolean[][] liquidMap;
+    private Fish[][] fishMap;
+    private List<Fish> fishes = new LinkedList<>();
+    private double wind = 10, gravity = 20;
+    private Terrain terrain;
+    private Element element;
+    private char bobber = '●',//O•☉✆✇♁┢Ø∅∮⊕⊖⊗⊘⊙⊚⊛⊜⊝Ⓧ◍◎●◐◑◒◓◔◕☯☮☻☺☹✪➊➋➌➍➎➏➐➑➒➓〄〇〶
+            hook = 'J',
+            wall = '#';
+    private Point bobberLocation;
+    private Point hookLocation;
+    private SColor lineColor = SColor.BURNT_BAMBOO,
+            bobberColor = SColor.SCARLET,
+            hookColor = SColor.BRASS,
+            skyColor = SColor.ALICE_BLUE,
+            playerColor = SColor.BETEL_NUT_DYE;
 
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        System.out.println(new String(Character.toChars(0x1f3a3)));
+        Fish.initSymbols(font);
+        if (SColorFactory.pallet("meter") == null) {
+            ArrayList<SColor> pallet = SColorFactory.asGradient(SColor.RED, SColor.ORANGE);
+            pallet.addAll(SColorFactory.asGradient(SColor.ORANGE, SColor.YELLOW));
+            pallet.addAll(SColorFactory.asGradient(SColor.YELLOW, SColor.ELECTRIC_GREEN));
+            SColorFactory.addPallet("meter", pallet);
+        }
+        new AssaultFish().go();
     }
 
     /**
      * Starts the game.
      */
     private void go() {
+        //dummy up starting inventory
+        for (Element e : Element.values()) {
+            fishInventory.put(e, new TreeMap<Size, Integer>());
+            for (Size s : Size.values()) {
+//                fishInventory.get(e).put(s, rng.nextInt(6));
+                fishInventory.get(e).put(s, 0);
+            }
+        }
+
         initializeFrame();
+        initializeFishInventory();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
 
-        player = new Monster(Monster.PLAYER);
+        player = new Creature(Creature.PLAYER);
 
         createMap();
         updateMap();
-        updateStats();
         printOut("Welcome to Assault Fish!    This is version " + version);
+    }
 
-        while (true) {
-            runTurn();
+    private void goFish() {
+        for (int i = 0; i < 80; i++) {
+            fishes.add(new Fish(Size.SMALL, element));
         }
+        for (int i = 0; i < 40; i++) {
+            fishes.add(new Fish(Size.MEDIUM, element));
+        }
+        for (int i = 0; i < 20; i++) {
+            fishes.add(new Fish(Size.LARGE, element));
+        }
+        for (int i = 0; i < 5; i++) {
+            fishes.add(new Fish(Size.GIANT, element));
+        }
+
+        initFishingMap();
+        initFish();
+        initFishingDisplay();
+        fishingMasterPanel.setVisible(true);
+        layers.add(fishingMasterPanel);
+        flipMouseControl(false);
     }
 
     /**
@@ -87,27 +186,102 @@ public class AssaultFish {
      * doesn't loop!
      */
     private void runTurn() {
-        int key = keyListener.next().getExtendedKeyCode();
-        boolean success = false;
-        Direction dir = getDirection(key);
-        if (dir != null) {
-            success = tryToMove(dir);
-        } else {
-            switch (key) {
-                case VK_ESCAPE:
-                    printOut("Thanks for playing, press any key to exit.");
-                    keyListener.next();
-                    System.exit(0);
+        updateMap();
+        moveAllMonsters();
+        updateMap();
+    }
+
+    private void workClick(final int x, final int y) {
+//        Thread thread = new Thread(new Runnable() {
+//
+//            @Override
+//            public void run() {
+        boolean success = tryToMove(Direction.getDirection(x - player.x, y - player.y));
+        if (success) {
+            runTurn();
+        }
+//            }
+//        });
+//        thread.start();
+    }
+
+    private void exiting() {
+//        printOut("Thanks for playing, press any key to exit.");
+//        keyListener.blockOnEmpty(false);
+//        keyListener.flush();
+//        while (!keyListener.hasNext()) {
+//            Thread.yield();
+//        }
+        System.exit(0);
+    }
+
+    private void throwFish(int targetX, int targetY) {
+        if (selectedFish == null) {
+            return;
+        }
+
+        int n = fishInventory.get(selectedFish.element).get(selectedFish.size);
+        if (n < 1) {
+            selectedFish = null;
+            return;
+        }
+
+        RadiusStrategy strat = BasicRadiusStrategy.CIRCLE;
+        int radius = 1;
+        SColor c = selectedFish.color;
+        switch (selectedFish.size) {
+            case SMALL:
+                radius = 2;
+                break;
+            case MEDIUM:
+                radius = 3;
+                break;
+            case LARGE:
+                radius = 5;
+                break;
+            case GIANT:
+                radius = 9;
+                break;
+        }
+        for (int x = targetX - radius; x <= targetX + radius; x++) {
+            for (int y = targetY - radius; y <= targetY + radius; y++) {
+                if (strat.radius(targetX, targetY, x, y) <= radius + 0.1) {
+                    if (x >= 0 && x < width && y >= 0 && y < height) {
+                        map[x][y].terrain = Terrain.makeElementalFloor(selectedFish.element, false);
+                    }
+                }
             }
         }
 
-        //update all end of turn items
-        if (success) {
-            updateMap();
-            moveAllMonsters();
-            updateMap();
-            player.causeDamage(1);//health drains each turn!
-            updateStats();
+        removeFish(selectedFish);
+        updateOverlay();
+        updateMap();
+    }
+
+    private void addFish(Fish fish) {
+        int n = fishInventory.get(fish.element).get(fish.size);
+        if (n < maxFish) {
+            printOut("Caught a " + fish.name + "!");
+            fishInventory.get(fish.element).put(fish.size, n + 1);
+            updateFishInventoryPanel();
+        } else {
+            printOut("No more room for " + fish.name + ".");
+        }
+    }
+
+    private void removeFish(Fish fish) {
+        int n = fishInventory.get(fish.element).get(fish.size);
+        if (n > 0) {
+            if (n == 1) {
+                printOut("That was your last " + fish.name + "!");
+                selectedFish = null;
+            } else {
+                printOut("Throwing a " + fish.name + ".");
+            }
+            fishInventory.get(fish.element).put(fish.size, n - 1);
+            updateFishInventoryPanel();
+        } else {
+            printOut("No more " + fish.name + " in your inventory.");
         }
     }
 
@@ -122,23 +296,29 @@ public class AssaultFish {
      */
     private boolean tryToMove(Direction dir) {
         MapCell tile = map[player.x + dir.deltaX][player.y + dir.deltaY];
-        if (tile.resistance("movement") >= 1) {
+        if (tile.isBlocking()) {
+            if (tile.terrain.lake) {
+                terrain = map[player.x][player.y].terrain;
+                element = tile.terrain.element;
+                goFish();
+            }
+
             return false;
         }
 
-        Monster monster = tile.creature;
+        Creature monster = tile.creature;
         if (monster == null) {//move the player
             map[player.x][player.y].creature = null;
-            mapPanel.slide(new Point(player.x, player.y), dir);
-            mapPanel.waitForAnimations();
+//            mapPanel.slide(new Point(player.x, player.y), dir);
+//            mapPanel.waitForAnimations();
             player.x += dir.deltaX;
             player.y += dir.deltaY;
             map[player.x][player.y].creature = player;
             return true;
         } else {//attack!
-            mapPanel.bump(new Point(player.x, player.y), dir);
-            mapPanel.waitForAnimations();
-            boolean dead = monster.causeDamage(playerStrength);
+//            mapPanel.bump(new Point(player.x, player.y), dir);
+//            mapPanel.waitForAnimations();
+            boolean dead = monster.causeDamage(player.strength);
             if (dead) {
                 monsters.remove(monster);
                 map[player.x + dir.deltaX][player.y + dir.deltaY].creature = null;
@@ -156,32 +336,73 @@ public class AssaultFish {
         doFOV();
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-//                map[x][y].setSeen(true);//uncomment this to see the fully generated map rather than the player's view
-                mapPanel.placeCharacter(x, y, map[x][y].getSymbol().charAt(0), map[x][y].foregroundColor());
+                map[x][y].light = SColor.WHITE;
+                map[x][y].seen = true;
+                mapPanel.placeCharacter(x, y, map[x][y].getSymbol().charAt(0), map[x][y].foregroundColor(), map[x][y].backgroundColor());
             }
         }
 
+        mapPanel.placeCharacter(player.x, player.y, player.symbol.charAt(0));
         mapPanel.refresh();
     }
 
-    /**
-     * Updates the stats display to show current values
-     */
-    private void updateStats() {
-        for (int x = 0; x < statWidth; x++) {
-            for (int y = 0; y < height; y++) {
-                statsPanel.clearCell(x, y);
+    private void updateFishInventoryPanel() {
+        int x = 1;//start off with a bit of padding
+        fishInventoryPanel.removeHighlight();
+        for (Element e : Element.values()) {
+            int y = 1;
+            for (Size s : Size.values()) {
+                if (selectedFish != null && selectedFish.element == e && selectedFish.size == s) {
+                    fishInventoryPanel.highlight(x, y, x + maxFish - 1, y);
+                }
+                int n = fishInventory.get(e).get(s);
+                for (int i = 0; i < maxFish; i++) {
+                    if (i < n) {
+                        fishInventoryPanel.placeCharacter(x + i, y, Fish.symbol(s).charAt(0), e.color);
+                    } else {
+                        fishInventoryPanel.clearCell(x + i, y);
+                    }
+                }
+                y++;
+            }
+            x += maxFish + 1;
+        }
+
+        fishInventoryPanel.refresh();
+    }
+
+    private void updateOverlay() {
+        overlayPanel.erase();
+
+        RadiusStrategy strat = BasicRadiusStrategy.CIRCLE;
+
+        if (selectedFish != null) {
+            int radius = 1;
+            SColor c = selectedFish.color;
+            switch (selectedFish.size) {
+                case SMALL:
+                    radius = 2;
+                    break;
+                case MEDIUM:
+                    radius = 3;
+                    break;
+                case LARGE:
+                    radius = 5;
+                    break;
+                case GIANT:
+                    radius = 9;
+                    break;
+            }
+            for (int x = overlayLocation.x - radius; x <= overlayLocation.x + radius; x++) {
+                for (int y = overlayLocation.y - radius; y <= overlayLocation.y + radius; y++) {
+                    if (strat.radius(overlayLocation.x, overlayLocation.y, x, y) <= radius + 0.1) {
+                        overlayPanel.clearCell(x, y, new SColor(c.getRed(), c.getGreen(), c.getBlue(), 20));
+                    }
+                }
             }
         }
 
-        int y = 0;
-        String info = "STATS";
-        statsPanel.placeHorizontalString((statWidth - info.length()) / 2, y, info);
-
-        y += 2;
-        info = "Health " + player.getHealth();
-        statsPanel.placeHorizontalString((statWidth - info.length()) / 2, y, info);
-        statsPanel.refresh();
+        overlayPanel.refresh();
     }
 
     /**
@@ -190,14 +411,29 @@ public class AssaultFish {
      * @param message
      */
     private void printOut(String message) {
-        for (int x = 0; x < width + statWidth; x++) {
-            for (int y = 0; y < outputLines; y++) {
-                outputPanel.clearCell(x, y);
-            }
-        }
 
-        outputPanel.placeHorizontalString(0, 0, message);
+        outputPanel.erase();
+        outputPanel.setVisible(true);
+
+        outputPanel.placeHorizontalString(outputPanel.getGridWidth() - message.length() - 1, 1, message);
         outputPanel.refresh();
+
+        final long startTime = System.currentTimeMillis();
+        final long duration = 2000;//in milliseconds
+        Thread thread = new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                while (System.currentTimeMillis() < startTime + duration) {
+                    Thread.yield();
+                }
+                outputPanel.setVisible(false);
+                outputPanel.erase();
+            }
+        });
+
+        thread.setDaemon(true);
+        thread.start();
     }
 
     /**
@@ -207,7 +443,7 @@ public class AssaultFish {
         boolean[][] walls = new boolean[width][height];
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                walls[x][y] = map[x][y].resistance("movement") >= 1;
+                walls[x][y] = map[x][y].isOpaque();
             }
         }
         fov.calculateFOV(walls, player.x, player.y, width + height);
@@ -218,10 +454,27 @@ public class AssaultFish {
         }
     }
 
-  
     private void createMap() {
         map = new MapCell[width][height];
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                map[x][y] = new MapCell(Terrain.DIRT);
+                if (rng.nextDouble() < 0.2) {
+                    map[x][y].feature = TerrainFeature.TREE;
+                }
+            }
+        }
 
+        player.x = width / 2;
+        player.y = height / 2;
+        MapCell cell = map[player.x][player.y];
+        cell.creature = player;
+        cell.feature = null;
+        cell.item = null;
+
+        cell = map[player.x + 2][player.y + 2];
+        cell.terrain = Terrain.makeElementalPool(Element.BLOOD);
+        cell.terrain.lake = true;
     }
 
     /**
@@ -236,7 +489,7 @@ public class AssaultFish {
         for (int placeX = centerX - spread; placeX < centerX + spread; placeX++) {
             for (int placeY = centerY - spread; placeY < centerY + spread; placeY++) {
                 if (rng.nextDouble() < 0.2 && placeX > 0 && placeX < width - 1 && placeY > 0 && placeY < height - 1) {
-                    map[placeX][placeY] = new Tile(true);
+                    map[placeX][placeY] = new MapCell(Terrain.DIRT, TerrainFeature.TREE);
                 }
             }
         }
@@ -247,34 +500,19 @@ public class AssaultFish {
      *
      * @param monster
      */
-    private void placeMonster(Monster monster) {
+    private void placeMonster(Creature monster) {
         int x = rng.nextInt(width - 2) + 1;
         int y = rng.nextInt(height - 2) + 1;
-        if (map[x][y].isWall() || map[x][y].getMonster() != null) {
+        if (map[x][y].isBlocking() || map[x][y].creature != null) {
             placeMonster(monster);//try again recursively
         } else {
-            map[x][y].setMonster(monster);
+            map[x][y].creature = monster;
             monster.x = x;
             monster.y = y;
 
-            if (!monster.equals(Monster.PLAYER)) {
+            if (!monster.equals(Creature.PLAYER)) {
                 monsters.add(monster);
             }
-        }
-    }
-
-    /**
-     * Places the provided monster into an open tile space.
-     *
-     * @param treasure
-     */
-    private void placeTreasure(Treasure treasure) {
-        int x = rng.nextInt(width - 2) + 1;
-        int y = rng.nextInt(height - 2) + 1;
-        if (map[x][y].isWall() || map[x][y].getTreasure() != null) {
-            placeTreasure(treasure);//try again recursively
-        } else {
-            map[x][y].setTreasure(treasure);
         }
     }
 
@@ -284,21 +522,21 @@ public class AssaultFish {
      *
      * @param monster
      */
-    private void moveMonster(Monster monster) {
+    private void moveMonster(Creature monster) {
         Direction dir = Direction.CARDINALS[rng.nextInt(Direction.CARDINALS.length)];//get a random direction
-        Tile tile = map[monster.x + dir.deltaX][monster.y + dir.deltaY];
-        if (!tile.isWall() && tile.getMonster() == null) {
-            map[monster.x][monster.y].setMonster(null);
-            if (tile.isSeen()) {//only show animation if within sight
-                mapPanel.slide(new Point(monster.x, monster.y), dir);
-                mapPanel.waitForAnimations();
+        MapCell tile = map[monster.x + dir.deltaX][monster.y + dir.deltaY];
+        if (!tile.isBlocking() && tile.creature == null) {
+            map[monster.x][monster.y].creature = null;
+            if (tile.seen) {//only show animation if within sight
+//                mapPanel.slide(new Point(monster.x, monster.y), dir);
+//                mapPanel.waitForAnimations();
             }
             monster.x += dir.deltaX;
             monster.y += dir.deltaY;
-            map[monster.x][monster.y].setMonster(monster);
-        } else if (tile.isSeen()) {//only show animation if within sight
-            mapPanel.bump(new Point(monster.x, monster.y), dir);
-            mapPanel.waitForAnimations();
+            map[monster.x][monster.y].creature = monster;
+        } else if (tile.seen) {//only show animation if within sight
+//            mapPanel.bump(new Point(monster.x, monster.y), dir);
+//            mapPanel.waitForAnimations();
         }
     }
 
@@ -306,7 +544,7 @@ public class AssaultFish {
      * Moves all the monsters, one at a time.
      */
     private void moveAllMonsters() {
-        for (Monster monster : monsters) {
+        for (Creature monster : monsters) {
             moveMonster(monster);
         }
     }
@@ -316,79 +554,560 @@ public class AssaultFish {
      */
     private void initializeFrame() {
         frame = new JFrame("Assault Fish");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                exiting();
+            }
+        });
         try {
             frame.setIconImage(ImageIO.read(new File("./icon.png")));
         } catch (IOException ex) {
             //don't do anything if it failed, the default Java icon will be used
         }
+        frame.setBackground(SColor.BLACK);
 
-        Font font = new Font("Lucidia", Font.PLAIN, fontSize);
-
-        keyListener = new SGKeyListener(true, SGKeyListener.CaptureType.DOWN);
-        frame.addKeyListener(keyListener);
+        layers = new JLayeredPane();
+        frame.add(layers, BorderLayout.WEST);
 
         mapPanel = new SwingPane(width, height, font);
 
-        TextCellFactory textFactory = mapPanel.getTextCellFactory();
+        textFactory = mapPanel.getTextCellFactory();
         textFactory.setAntialias(true);
-//        textFactory.addFit();
+        for (Size s : Size.values()) {
+            textFactory.addFit(Fish.symbol(s));
+        }
+
         textFactory.initializeBySize(mapPanel.getCellWidth(), mapPanel.getCellHeight(), font);
         mapPanel.placeHorizontalString(width / 2 - 4, height / 2, "Loading");
         mapPanel.refresh();
-        frame.add(mapPanel, BorderLayout.WEST);
+        layers.setPreferredSize(mapPanel.getPreferredSize());
+        layers.setLayer(mapPanel, JLayeredPane.DEFAULT_LAYER);
+        layers.add(mapPanel);
 
-        statsPanel = new SwingPane(mapPanel.getCellWidth(), mapPanel.getCellHeight(), statWidth, mapPanel.getGridHeight(), font);
-        statsPanel.setDefaultBackground(SColor.DARK_GRAY);
-        statsPanel.setDefaultForeground(SColor.RUST);
-        statsPanel.refresh();
-        frame.add(statsPanel, BorderLayout.EAST);
+        overlayPanel = new SwingPane(mapPanel.getGridWidth(), mapPanel.getGridHeight(), textFactory);
+        overlayPanel.refresh();
+        layers.setLayer(overlayPanel, JLayeredPane.PALETTE_LAYER);
+        layers.add(overlayPanel);
 
-        outputPanel = new SwingPane(mapPanel.getGridWidth() + statsPanel.getGridWidth(), outputLines, font);
+        outputPanel = new SwingPane(mapPanel.getGridWidth(), mapPanel.getGridHeight(), textFactory);
         outputPanel.setDefaultBackground(SColor.ALICE_BLUE);
         outputPanel.setDefaultForeground(SColor.BURNT_BAMBOO);
         outputPanel.refresh();
-        frame.add(outputPanel, BorderLayout.SOUTH);
+        layers.setLayer(outputPanel, JLayeredPane.POPUP_LAYER);
+        layers.add(outputPanel);
+
+        fishText = new TextCellFactory(textFactory);
+        fishText.setPadding(0, 0, 0, 1);
+        fishText.initializeBySize(mapPanel.getCellWidth(), mapPanel.getCellHeight(), font);
+        fishInventoryPanel = new SwingPane(mapPanel.getGridWidth(), 6, fishText);
+        fishInventoryPanel.setDefaultBackground(SColor.BLACK);
+        frame.add(fishInventoryPanel, BorderLayout.SOUTH);
 
         frame.pack();
+
+        mapMouse = new MapMouse(mapPanel.getCellWidth(), mapPanel.getCellHeight());
+        inventoryMouse = new FishInventoryMouse(fishInventoryPanel.getCellWidth(), fishInventoryPanel.getCellHeight());
+        flipMouseControl(true);
+
+        //add invisibly the fishing panels
+        initFishingGUI();
     }
 
-    private Direction getDirection(int code) {
-        switch (code) {
-            case VK_LEFT:
-            case VK_NUMPAD4:
-            case VK_H:
-                return LEFT;
-            case VK_RIGHT:
-            case VK_NUMPAD6:
-            case VK_L:
-                return RIGHT;
-            case VK_UP:
-            case VK_NUMPAD8:
-            case VK_K:
-                return UP;
-            case VK_DOWN:
-            case VK_NUMPAD2:
-            case VK_J:
-                return DOWN;
-            case VK_NUMPAD1:
-            case VK_B:
-                return DOWN_LEFT;
-            case VK_NUMPAD3:
-            case VK_N:
-                return DOWN_RIGHT;
-            case VK_NUMPAD7:
-            case VK_Y:
-                return UP_LEFT;
-            case VK_NUMPAD9:
-            case VK_U:
-                return UP_RIGHT;
-            case VK_PERIOD:
-            case VK_NUMPAD5:
-                return NONE;
-            default:
-                return null;
+    private void flipMouseControl(boolean mapMode) {
+        if (mapMode) {
+            mapPanel.addMouseListener(mapMouse);
+            mapPanel.addMouseMotionListener(mapMouse);
+            mapPanel.addMouseWheelListener(mapMouse);
+            fishInventoryPanel.addMouseListener(inventoryMouse);
+            frame.removeMouseListener(fishMouse);
+        } else {
+            mapPanel.removeMouseListener(mapMouse);
+            mapPanel.removeMouseMotionListener(mapMouse);
+            mapPanel.removeMouseWheelListener(mapMouse);
+            fishInventoryPanel.removeMouseListener(inventoryMouse);
+            frame.addMouseListener(fishMouse);
         }
+    }
+
+    private void initializeFishInventory() {
+        SwingPane p = fishInventoryPanel;
+        for (int x = 0; x < p.getGridWidth(); x++) {
+            for (int y = 0; y < p.getGridHeight(); y++) {
+                p.clearCell(x, y);
+            }
+        }
+
+        int x = 1;//start off with a bit of padding
+        for (Element e : Element.values()) {
+            p.placeHorizontalString(x, 0, e.name, e.color, SColor.BLACK);
+            x += maxFish + 1;
+        }
+
+        updateFishInventoryPanel();
+    }
+
+    private class FishInventoryMouse extends MouseInputAdapter {
+
+        private final int cellWidth;
+        private final int cellHeight;
+
+        public FishInventoryMouse(int cellWidth, int cellHeight) {
+            this.cellWidth = cellWidth;
+            this.cellHeight = cellHeight;
+        }
+
+        private MouseEvent translateToGrid(MouseEvent e) {
+            int x = e.getX() / cellWidth;
+            int y = e.getY() / cellHeight;
+            return new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiersEx(), x, y, e.getClickCount(), e.isPopupTrigger(), e.getButton());
+        }
+
+        @Override
+        public void mousePressed(MouseEvent e) {
+            e = translateToGrid(e);
+
+            int x = 1;//start off with a bit of padding
+            for (Element element : Element.values()) {
+                int y = 1;
+                for (Size s : Size.values()) {
+                    if (e.getX() >= x && e.getX() < x + maxFish && e.getY() == y) {
+                        selectedFish = new Fish(s, element);
+                    }
+                    y++;
+                }
+                x += maxFish + 1;
+            }
+
+            updateFishInventoryPanel();
+            updateOverlay();
+        }
+    }
+
+    private class MapMouse extends MouseInputAdapter {
+
+        private final int cellWidth;
+        private final int cellHeight;
+
+        public MapMouse(int cellWidth, int cellHeight) {
+            this.cellWidth = cellWidth;
+            this.cellHeight = cellHeight;
+        }
+
+        private MouseEvent translateToGrid(MouseEvent e) {
+            int x = e.getX() / cellWidth;
+            int y = e.getY() / cellHeight;
+            return new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiersEx(), x, y, e.getClickCount(), e.isPopupTrigger(), e.getButton());
+        }
+
+        @Override
+        public void mousePressed(MouseEvent e) {
+            if (SwingUtilities.isLeftMouseButton(e)) {
+                e = translateToGrid(e);
+                workClick(e.getX(), e.getY());
+            } else if (SwingUtilities.isRightMouseButton(e)) {
+                e = translateToGrid(e);
+                throwFish(e.getX(), e.getY());
+            }
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e) {
+            overlayPanel.setVisible(false);
+        }
+
+        @Override
+        public void mouseEntered(MouseEvent e) {
+            overlayPanel.setVisible(true);
+        }
+
+        @Override
+        public void mouseMoved(MouseEvent e) {
+            e = translateToGrid(e);
+            if (overlayLocation.x != e.getX() || overlayLocation.y != e.getY()) {
+                overlayLocation.x = e.getX();
+                overlayLocation.y = e.getY();
+                updateOverlay();
+            }
+        }
+
+    }
+
+    private void initFishingGUI() {
+        JLayeredPane fishingLayers = new JLayeredPane();
+
+        fishingMasterPanel = new JPanel();
+        fishingMasterPanel.setBackground(SColor.BLACK);
+        fishingMasterPanel.setPreferredSize(mapPanel.getPreferredSize());
+        fishingMasterPanel.setSize(mapPanel.getSize());
+        fishingMasterPanel.setLayout(new BorderLayout());
+        fishingMasterPanel.add(fishingLayers, BorderLayout.NORTH);
+
+        TextCellFactory fishingFactory = new TextCellFactory(textFactory);
+
+        fishingFactory.initializeBySize(mapPanel.getCellWidth() / 2, mapPanel.getCellHeight() / 2, new Font(font.getFontName(), Font.BOLD, font.getSize() + 2));//a little extra size in case the switch away from bold matters
+        fishingViewPanel = new SwingPane(fishWidth, fishHeight, fishingFactory);
+        fishingLayers.setLayer(fishingViewPanel, JLayeredPane.DEFAULT_LAYER);
+        fishingLayers.add(fishingViewPanel);
+
+        fishPane = new SwingPane(fishWidth, fishHeight, fishingFactory);
+        fishingLayers.setLayer(fishPane, JLayeredPane.PALETTE_LAYER);//set just above the regular map layer
+        fishingLayers.add(fishPane);
+
+        TextCellFactory largeFactory = new TextCellFactory();
+        largeFactory.setAntialias(true);
+        largeFactory.setFitCharacters("@");
+        largeFactory.initializeBySize(fishingViewPanel.getCellWidth() * largeTextScale, fishingViewPanel.getCellHeight() * largeTextScale, new Font(font.getFontName(), Font.BOLD, 192));
+        largeTextPane = new SwingPane(fishWidth / largeTextScale, fishHeight / largeTextScale, largeFactory);
+        fishingLayers.setLayer(largeTextPane, JLayeredPane.MODAL_LAYER);
+        fishingLayers.add(largeTextPane);
+
+        fishingLayers.setPreferredSize(fishingViewPanel.getPreferredSize());
+        fishingLayers.setSize(fishingViewPanel.getSize());
+
+        meterPanel = new SwingPane(width, 3, textFactory);
+        meterPanel.setDefaultBackground(SColor.BLACK);
+        initMeter();
+        fishingMasterPanel.add(meterPanel, BorderLayout.SOUTH);
+
+        layers.setLayer(fishingMasterPanel, JLayeredPane.MODAL_LAYER);
+//        frame.addMouseListener(new FishMouse());
+    }
+
+    private void dropHook() {
+        fishingViewPanel.placeCharacter(bobberLocation.x, bobberLocation.y + 1, hook, hookColor);
+        fishingViewPanel.refresh();
+        int x = bobberLocation.x;
+        int y;
+        for (y = bobberLocation.y + 2; y <= bed(x); y++) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException ex) {
+            }
+            fishingViewPanel.placeCharacter(x, y - 1, line(UP), lineColor);
+            fishingViewPanel.placeCharacter(x, y, hook, hookColor);
+            fishingViewPanel.refresh();
+        }
+
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException ex) {
+        }
+
+        Fish fish = null;
+        do {
+            fishingViewPanel.clearCell(x, y);
+
+            y--;
+            fishingViewPanel.placeCharacter(x, y, hook, hookColor);
+            if (fish != null) {
+                fishingViewPanel.placeCharacter(x, y, fish.symbol.charAt(0), fish.color);
+            } else if (fishMap[x][y] != null) {
+                fish = fishMap[x][y];
+                fishes.remove(fish);
+                fishMap[x][y] = null;
+                fishPane.clearCell(x, y);
+                fishPane.refresh();
+            }
+            fishingViewPanel.refresh();
+
+            try {
+                Thread.sleep(40);
+            } catch (InterruptedException ex) {
+            }
+        } while (y > bobberLocation.y + 1);
+
+        if (fish != null) {
+            addFish(fish);
+        }
+    }
+
+    private void throwBobber() {
+        int targetX = (int) (castingStrength * (fishWidth - 1 - terrainWidth * 2) + terrainWidth * 2 + 1);//finds drop target based on strength percent
+        int startY = largeTextScale * 2 + 1;//start at the guy's head
+        int startX = terrainWidth - 2;//start at the shoreline
+
+        BallisticsSolver solver = new BallisticsSolver(startX, startY, targetX, liquidHeight - 2, wind, gravity);
+        int solveHeight = fishWidth / (targetX + 5);
+        solveHeight = Integer.min(solveHeight, largeTextScale * 2 - 2);
+        solveHeight = Integer.max(solveHeight, 1);
+        solver.solveByHeight(solveHeight);
+
+        int lastX = -1, lastY = -1, bobberX = -2, bobberY = -2;
+        double trueTime = solver.getTime();
+        int targetTime = targetX * 20;//in milliseconds
+        long lastTime;
+        boolean goingDown = false;
+        for (double time = 0; time <= targetTime; time += System.currentTimeMillis() - lastTime) {
+            lastTime = System.currentTimeMillis();
+            double solverTime = trueTime * time / targetTime;
+            bobberX = solver.x(solverTime);
+            bobberY = solver.y(solverTime);
+            if (lastX != bobberX) {
+                fishingViewPanel.placeCharacter(lastX, lastY, line(getDirection(bobberX - lastX, bobberY - lastY)), lineColor);
+                fishingViewPanel.placeCharacter(bobberX, bobberY, bobber, bobberColor);
+                fishingViewPanel.refresh();
+                lastX = bobberX;
+                lastY = bobberY;
+                goingDown = false;
+            } else if (Math.abs(bobberY - lastY) > 1 || (goingDown && bobberY != lastY)) {
+                fishingViewPanel.placeCharacter(lastX, lastY, line(getDirection(bobberX - lastX, bobberY - lastY)), lineColor);
+                fishingViewPanel.placeCharacter(bobberX, bobberY, bobber, bobberColor);
+                fishingViewPanel.refresh();
+                lastX = bobberX;
+                lastY = bobberY;
+                goingDown = true;
+            } else if (bobberY != lastY) {
+                fishingViewPanel.clearCell(lastX, lastY);
+                goingDown = false;
+            }
+
+            Thread.yield();
+        }
+
+        fishingViewPanel.placeCharacter(bobberX, bobberY, line(getDirection(bobberX - lastX, bobberY - lastY)), lineColor);
+        fishingViewPanel.placeCharacter(bobberX, bobberY + 1, bobber, bobberColor);
+        bobberLocation = new Point(bobberX, bobberY + 1);
+        fishingViewPanel.refresh();
+
+        for (int x = 1; x < meterPanel.getGridWidth() - 1; x++) {
+            meterPanel.placeCharacter(x, 1, ' ');
+        }
+        meterPanel.refresh();
+    }
+
+    /**
+     * Returns the y position of the last space before the terrain bed.
+     *
+     * To allow for bounds safety, this method will return 0 as the result if the bed reaches the
+     * top rather than -1.
+     *
+     * @param x
+     * @return
+     */
+    private int bed(int x) {
+        for (int y = 1; y < fishHeight; y++) {
+            if (terrainMap[x][y]) {
+                return y - 1;
+            }
+        }
+        return fishHeight - 1;
+    }
+
+    private void initFishingDisplay() {
+        for (int x = 0; x < fishWidth; x++) {
+            for (int y = 0; y < fishHeight; y++) {
+                if (terrainMap[x][y]) {
+                    fishingViewPanel.clearCell(x, y, getTerrainColor(x, y));
+                } else if (liquidMap[x][y]) {
+                    fishingViewPanel.clearCell(x, y, getLiquidColor(x, y));
+                } else {
+                    fishingViewPanel.clearCell(x, y, getSkyColor(x, y));
+                }
+            }
+        }
+
+//        fishPane.erase();
+        for (Fish f : fishes) {
+            fishPane.placeCharacter(f.x, f.y, f.symbol.charAt(0), f.color);
+        }
+
+        fishPane.refresh();
+        fishingViewPanel.refresh();
+        largeTextPane.refresh();
+    }
+
+    private SColor getTerrainColor(int x, int y) {
+        return SColorFactory.blend(terrain.color, SColorFactory.dim(terrain.color), PerlinNoise.noise(y, x));
+    }
+
+    private SColor getLiquidColor(int x, int y) {
+        return SColorFactory.blend(SColorFactory.blend(element.color, SColorFactory.dim(element.color), PerlinNoise.noise(x, y)), SColorFactory.dimmest(element.color), y / (double) (fishHeight - liquidHeight));
+    }
+
+    private SColor getSkyColor(int x, int y) {
+        return SColorFactory.blend(SColorFactory.lightest(skyColor), SColorFactory.dim(skyColor), y / (double) liquidHeight);
+    }
+
+    private void initFish() {
+        fishMap = new Fish[fishWidth][fishHeight];
+
+        for (Fish fish : fishes) {
+            boolean placed = false;
+            while (!placed) {
+                int x = rng.between(terrainWidth * 2 + 1, fishWidth);
+                if (bed(x) > liquidHeight + 1) {
+                    int y = rng.between(liquidHeight + 1, bed(x));
+                    if (fishMap[x][y] == null) {
+                        fishMap[x][y] = fish;
+                        fish.x = x;
+                        fish.y = y;
+                        placed = true;
+                    }
+                }
+            }
+        }
+    }
+
+    private void initFishingMap() {
+        terrainMap = new boolean[fishWidth][fishHeight];
+        liquidMap = new boolean[fishWidth][fishHeight];
+
+        //fill in standing edge
+        for (int x = 0; x < terrainWidth; x++) {
+            for (int y = liquidHeight - largeTextScale - 1; y < fishHeight; y++) {
+                terrainMap[x][y] = true;
+            }
+        }
+
+        //fill in slope to liquid
+        int lastHeight = liquidHeight - largeTextScale + 1;
+        int nextHeight = liquidHeight + 1;
+        for (int x = terrainWidth; x < terrainWidth * 2; x++) {
+            int offset = rng.between(-1, 2);
+            offset *= Math.signum(nextHeight - lastHeight);
+            int terrainHeight = lastHeight + offset;
+            terrainHeight = Math.min(terrainHeight, Math.max(lastHeight, nextHeight));
+            terrainHeight = Math.max(terrainHeight, Math.min(lastHeight, nextHeight));
+            lastHeight = terrainHeight;
+            if (lastHeight == nextHeight) {
+                nextHeight = rng.between(liquidHeight + 4, fishHeight - 1);
+            }
+            for (int y = liquidHeight; y < terrainHeight; y++) {
+                liquidMap[x][y] = true;
+            }
+            for (int y = terrainHeight; y < fishHeight; y++) {
+                terrainMap[x][y] = true;
+            }
+        }
+
+        //fill in rest of terrain and liquid
+        lastHeight = liquidHeight + 2;
+        nextHeight = rng.between(liquidHeight + 8, fishHeight - 1);
+        for (int x = terrainWidth * 2; x < fishWidth; x++) {
+            int offset = rng.between(-1, 3);
+            offset *= Math.signum(nextHeight - lastHeight);
+            int terrainHeight = lastHeight + offset;
+            terrainHeight = Math.min(terrainHeight, fishHeight - 1);
+            terrainHeight = Math.max(terrainHeight, liquidHeight + 12);
+            lastHeight = terrainHeight;
+            if (lastHeight == nextHeight) {
+                nextHeight = rng.between(liquidHeight + 14, fishHeight - 1);
+            }
+            for (int y = liquidHeight; y < terrainHeight; y++) {
+                liquidMap[x][y] = true;
+            }
+            for (int y = terrainHeight; y < fishHeight; y++) {
+                terrainMap[x][y] = true;
+            }
+        }
+
+        //place player
+        largeTextPane.placeCharacter(1, 2, '@', playerColor);
+    }
+
+    private char line(Direction dir) {
+        switch (dir) {//╱╲─╭╮
+            case LEFT:
+            case RIGHT:
+                return '─';
+            case UP:
+            case DOWN:
+                return '|';
+            case UP_LEFT:
+            case DOWN_RIGHT:
+                return '╲';
+            case UP_RIGHT:
+            case DOWN_LEFT:
+                return '╱';
+            default:
+                return ' ';
+        }
+    }
+
+    private void initMeter() {
+        meterPanel.placeHorizontalString((meterPanel.getGridWidth() - "Cast Strength".length() - 1) / 2, 0, "Cast Strength");
+        meterPanel.placeHorizontalString(2, 0, "None");
+        meterPanel.placeHorizontalString(meterPanel.getGridWidth() - 3 - "Max".length(), 0, "Max");
+        meterPanel.refresh();
+    }
+
+    private class MeterListener implements ActionListener {
+
+        double timeStep = 1000;//how many milliseconds per time step
+        int meterOffset = 3;
+        int meterSize;
+        long time, lastTime;
+
+        public void reset() {
+            for (int i = 0; i < meterPanel.getGridWidth(); i++) {
+                meterPanel.clearCell(i, 1);
+            }
+            meterPanel.refresh();
+        }
+
+        public void initialize() {
+            meterSize = width - meterOffset * 2;
+            time = (long) (1000 * Math.PI / 2.0);
+            lastTime = System.currentTimeMillis();
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            castingStrength = 1 - Math.abs(Math.sin(time / timeStep));
+            int drawX = (int) (castingStrength * meterSize);
+            drawX = Math.min(drawX, meterSize);//make sure rare case of strength 1 doesn't cause problems
+            for (int i = 0; i < meterSize; i++) {
+                if (i < drawX) {
+                    meterPanel.placeCharacter(i + meterOffset, 1, '●', SColorFactory.fromPallet("meter", i / (float) (meterSize)));
+                } else {
+                    meterPanel.clearCell(i + meterOffset, 1);
+                }
+            }
+            meterPanel.refresh();
+
+            time += System.currentTimeMillis() - lastTime;
+            lastTime = System.currentTimeMillis();
+        }
+
+    }
+
+    private class FishMouse extends MouseInputAdapter {
+
+        private Timer timer;
+
+        @Override
+        public void mousePressed(MouseEvent e) {
+            if (SwingUtilities.isLeftMouseButton(e)) {
+                if (casting) {
+                    timer.stop();
+                    Thread thread = new Thread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            throwBobber();
+                            dropHook();
+                            meterListener.reset();
+                        }
+
+                    });
+                    thread.start();
+                    casting = false;
+                } else {
+                    initFishingDisplay();
+                    meterListener.reset();
+                    meterListener.initialize();
+                    timer = new Timer(10, meterListener);
+                    timer.start();
+                    casting = true;
+                }
+            } else if (SwingUtilities.isRightMouseButton(e)) {
+                layers.remove(fishingMasterPanel);
+                flipMouseControl(true);
+            }
+        }
+
     }
 
 }

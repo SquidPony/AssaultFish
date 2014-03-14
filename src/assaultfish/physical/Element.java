@@ -17,8 +17,7 @@ public enum Element {
     SAND("sand", "sandy", SColor.KHAKI),
     BLOOD("blood", "bloody", SColor.SCARLET),
     MAGMA("magma", "heated", SColor.SAFETY_ORANGE),
-    MANA("mana", "enchanted", SColor.ROYAL_PURPLE),
-    NONE("none", "", SColor.GRAY);
+    MANA("mana", "enchanted", SColor.ROYAL_PURPLE);
 
     public final String name, adjective;
     public final SColor color;

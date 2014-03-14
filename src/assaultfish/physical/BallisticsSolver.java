@@ -1,11 +1,11 @@
-package assaultfish.fishing;
+package assaultfish.physical;
 
 /**
  * Solves ballistics problems given the start and end points.
  *
  * @author Eben Howard - http://squidpony.com - howard@squidpony.com
  */
-class BallisticsSolver {
+public class BallisticsSolver {
 
     private final int startX, startY, endX, endY;
     private final double wind, gravity;

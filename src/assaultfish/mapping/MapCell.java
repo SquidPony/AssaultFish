@@ -1,7 +1,7 @@
 package assaultfish.mapping;
 
 import assaultfish.physical.Item;
-import assaultfish.physical.Monster;
+import assaultfish.physical.Creature;
 import assaultfish.physical.Terrain;
 import assaultfish.physical.TerrainFeature;
 import squidpony.squidcolor.SColor;
@@ -14,7 +14,7 @@ import squidpony.squidcolor.SColorFactory;
  */
 public class MapCell {
 
-    public Monster creature;
+    public Creature creature;
     public Terrain terrain;
     public TerrainFeature feature;
     public Item item;
@@ -28,68 +28,79 @@ public class MapCell {
         terrain = t;
     }
 
-    public MapCell(Terrain treasure, TerrainFeature feature) {
-        this.terrain = treasure;
+    public MapCell(Terrain terrain, TerrainFeature feature) {
+        this.terrain = terrain;
         this.feature = feature;
     }
 
     public SColor backgroundColor() {
-        if (light.equals(SColor.BLACK)) {
-            if (seen) {
-                if (feature != null) {
-                    return SColorFactory.blend(SColorFactory.desaturated(feature.color), SColor.BLACK, 0.75f);
-                } else {
-                    return SColorFactory.blend(SColorFactory.desaturated(terrain.color), SColor.BLACK, 0.75f);
-                }
-            } else {
-                return light;
-            }
+        if(seen){
+            return SColorFactory.dimmer(SColor.DARK_GRAY);
+        }else{
+            return SColor.BLACK;
         }
-
-        return SColorFactory.lightWith(feature == null ? terrain.color : feature.color, light);
+//        if (light.equals(SColor.BLACK)) {
+//            if (seen) {
+//                if (feature == null || (creature == null && item == null)) {
+//                    return SColorFactory.blend(SColorFactory.desaturated(terrain.color), SColor.BLACK, 0.75f);
+//                } else {
+//                    return SColorFactory.blend(SColorFactory.desaturated(feature.color), SColor.BLACK, 0.75f);
+//                }
+//            } else {
+//                return light;
+//            }
+//        }
+//        
+//        if (feature != null) {
+//            if (creature == null && item == null) {
+//                return SColorFactory.lightWith(terrain.color, light);
+//            } else {
+//                return SColorFactory.lightWith(feature.color, light);
+//            }
+//        } else if (creature != null) {
+//            return SColorFactory.lightWith(creature.color, light);
+//        } else if (item != null) {
+//            return SColorFactory.lightWith(item.color, light);
+//        } else {
+//            return SColorFactory.lightWith(terrain.color, light);
+//        }
     }
 
     public SColor foregroundColor() {
         //unlit
         if (light.equals(SColor.BLACK)) {
-            if (seen && (creature != null || item != null)) {//previously seen
-                return SColorFactory.blend(SColorFactory.desaturated(item == null ? creature.color : item.getColor()), SColor.BLACK, 0.75f);
+            if (seen) {//previously seen
+                return SColorFactory.blend(SColorFactory.desaturated(creature != null ? creature.color : item != null ? item.color : feature != null ? feature.color : SColor.TRANSPARENT), SColor.BLACK, 0.75f);
             }
             return SColor.TRANSPARENT;//nothing to see
         }
 
         //lit
-        return SColorFactory.lightWith(getTopItem().getColor(), light);
+        return SColorFactory.lightWith(creature != null ? creature.color : item != null ? item.color : feature != null ? feature.color : terrain.color, light);
     }
 
     public String getSymbol() {
-        //unlit
-        if (light.equals(SColor.BLACK)) {
-            if (seen) {
-                if (item != null) {
-                    return item.getSymbol();
-                } else {
-                    return terrain.symbol;
-                }
+        if (!light.equals(SColor.BLACK)) {
+            if (creature != null) {
+                return creature.symbol;
+            } else if (item != null) {
+                return item.symbol;
             }
-            return " ";//nothing to see
         }
 
-        //lit
-        return getTopItem().getSymbol();
+        if (feature != null) {
+            return feature.symbol;
+        }
+
+        return terrain.symbol;
     }
 
-    public Item getTopItem() {
-        Item display = creature;
-        if (display == null) {
-            display = item;
-        }
-        if (display == null) {
-            display = feature;
-        }
-        if (display == null) {
-            display = terrain;
-        }
-        return display;
+    public boolean isOpaque() {
+        return feature == null ? false : feature.opaque;
     }
+
+    public boolean isBlocking() {
+        return (feature == null ? false : feature.blocking) || terrain.blocking;
+    }
+
 }

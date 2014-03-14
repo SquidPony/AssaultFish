@@ -11,20 +11,20 @@ public class Terrain {
 
     public static final Terrain DIRT = new Terrain("dirt floor", ".", SColor.BRIGHT_GOLD_BROWN, false),
             STONE = new Terrain("stone floor", ".", SColor.LIGHT_GRAY, false),
-            WATER = new Terrain("water", "~", Element.WATER, true);
+            GRASS = new Terrain("grass floor", ".", SColor.FOREST_GREEN, false);
 
     public String name;
     public String symbol;
     public SColor color;
-    public Element element;
-    public boolean blocking;
+    public Element element = null;
+    public boolean blocking = false;
+    public boolean lake = false;
 
     public Terrain(String name, String symbol, SColor color, boolean blocking) {
         this.name = name;
         this.symbol = symbol;
         this.color = color;
         this.blocking = blocking;
-        element = Element.NONE;
     }
 
     public Terrain(String name, String symbol, Element element, boolean blocking) {
@@ -41,9 +41,14 @@ public class Terrain {
         element = other.element;
         blocking = other.blocking;
         color = other.color;
+        lake = other.lake;
     }
 
     public static Terrain makeElementalFloor(Element element, boolean blocking) {
-        return new Terrain(element.adjective + " floor", ".", element.color, blocking);
+        return new Terrain(element.adjective + " floor", "_", element.color, blocking);
+    }
+
+    public static Terrain makeElementalPool(Element element) {
+        return new Terrain(element.adjective + " pool", "~", element, true);
     }
 }

@@ -27,10 +27,10 @@ public class Item {
      * @param element
      */
     public Item(String name, String symbol, Element element) {
-        this.name = (element == null || element == Element.NONE ? "" : element.adjective + " ") + name;
+        this.name = (element == null ? "" : element.adjective + " ") + name;
         this.symbol = symbol;
         this.element = element;
-        color = element.color;
+        color = element == null ? SColor.GRAY : element.color;
     }
 
     /**
@@ -41,10 +41,10 @@ public class Item {
      * @param color
      */
     public Item(String name, String symbol, SColor color) {
-        this.name = (element == null || element == Element.NONE ? "" : element.adjective + " ") + name;
+        this.name = (element == null ? "" : element.adjective + " ") + name;
         this.symbol = symbol;
         this.color = color;
-        element = Element.NONE;
+        element = null;
     }
 
     public Item(Item other) {

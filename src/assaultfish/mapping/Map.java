@@ -1,6 +1,6 @@
 package assaultfish.mapping;
 
-import assaultfish.old.physical.Creature;
+import assaultfish.physical.Creature;
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -37,7 +37,7 @@ public class Map {
         FOVTranslator fov = new FOVTranslator(new ShadowFOV());
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                if (map[x][y].feature.opacity >= 1f) {
+                if (map[x][y].feature.opaque) {
                     sightBlocking[x][y] = 1f;
                 } else {
                     sightBlocking[x][y] = 0f;
