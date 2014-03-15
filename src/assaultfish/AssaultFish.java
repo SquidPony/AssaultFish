@@ -52,12 +52,14 @@ import squidpony.squidmath.RNG;
  */
 public class AssaultFish {
 
-    private static final int width = 90, height = 35, fishHeight = (height - 3) * 2, fishWidth = width * 2, fontSize = 20;
+    private static final int width = 80, height = 40;
+    private static final double widthScale = 1.2, heightScale = 1.2;
+    private static final int fishHeight = (int) ((height - 3) * heightScale), fishWidth = (int) (width * widthScale), fontSize = 20;
     private static final int largeTextScale = 4, liquidHeight = largeTextScale * 4, terrainWidth = largeTextScale * 2 + 1;
     private static final int maxFish = 6;
     private static final int overlayAlpha = 100;
     private static final Font font = new Font("Arial Unicode MS", Font.PLAIN, fontSize);
-    private static final String version = "1.0";
+    private static final String version = "1.1";
     private static volatile long outputEndTime;
 
 //    private static final String fishingPole = "🎣",//fishing pole and fish
@@ -154,25 +156,29 @@ public class AssaultFish {
         frame.setVisible(true);
 
         player = new Creature(Creature.PLAYER);
+        player.color = SColor.CORNFLOWER_BLUE;
 
         createMap();
         updateMap();
         printOut("Welcome to Assault Fish!    This is version " + version);
+        flipMouseControl(true);
     }
 
     private void goFish() {
+        selectedFish = null;
+        updateFishInventoryPanel();
         fishes = new LinkedList<>();
         fishPane.erase();
-        for (int i = 0; i < 80; i++) {
+        for (int i = 0; i < 40; i++) {
             fishes.add(new Fish(Size.SMALL, element));
         }
-        for (int i = 0; i < 40; i++) {
+        for (int i = 0; i < 20; i++) {
             fishes.add(new Fish(Size.MEDIUM, element));
         }
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 10; i++) {
             fishes.add(new Fish(Size.LARGE, element));
         }
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 2; i++) {
             fishes.add(new Fish(Size.GIANT, element));
         }
 
@@ -182,6 +188,7 @@ public class AssaultFish {
         fishingMasterPanel.setVisible(true);
         layers.add(fishingMasterPanel);
         flipMouseControl(false);
+        printOut("You are now fishing from " + terrain.name + " shore into the " + element.name + " lake.");
         canCast = true;
     }
 
@@ -191,6 +198,7 @@ public class AssaultFish {
      */
     private void runTurn() {
         updateMap();
+        checkForReactions();
         moveAllMonsters();
         updateMap();
     }
@@ -490,6 +498,10 @@ public class AssaultFish {
             placeWallChunk(Terrain.STONE, null);
         }
 
+        for (int i = 0; i < 20; i++) {
+            placeMonster(Creature.getRandomMonster());
+        }
+
         player.x = width / 2;
         player.y = height / 2;
         MapCell cell = map[player.x][player.y];
@@ -546,6 +558,9 @@ public class AssaultFish {
      */
     private void moveMonster(Creature monster) {
         Direction dir = Direction.CARDINALS[rng.nextInt(Direction.CARDINALS.length)];//get a random direction
+        if (monster.x + dir.deltaX < 0 || monster.x + dir.deltaX >= width || monster.y + dir.deltaY < 0 || monster.y + dir.deltaY >= height) {
+            return;//trying to leave map so do nothing
+        }
         MapCell tile = map[monster.x + dir.deltaX][monster.y + dir.deltaY];
         if (!tile.isBlocking() && tile.creature == null) {
             map[monster.x][monster.y].creature = null;
@@ -572,6 +587,10 @@ public class AssaultFish {
         }
     }
 
+    private void checkForReactions(){
+        
+    }
+    
     /**
      * Moves all the monsters, one at a time.
      */
@@ -648,7 +667,6 @@ public class AssaultFish {
 
         mapMouse = new MapMouse(mapPanel.getCellWidth(), mapPanel.getCellHeight());
         inventoryMouse = new FishInventoryMouse(fishInventoryPanel.getCellWidth(), fishInventoryPanel.getCellHeight());
-        flipMouseControl(true);
 
         //add invisibly the fishing panels
         initFishingGUI();
@@ -714,7 +732,11 @@ public class AssaultFish {
                 for (Size s : Size.values()) {
                     if (e.getX() >= x && e.getX() < x + maxFish && e.getY() == y) {
                         if (fishInventory.get(element).get(s) > 0) {
-                            selectedFish = new Fish(s, element);
+                            if (selectedFish != null && selectedFish.element == element && selectedFish.size == s) {
+                                selectedFish = null;
+                            } else {
+                                selectedFish = new Fish(s, element);
+                            }
                         }
                         break check;//desired selection not available
                     }
@@ -746,13 +768,7 @@ public class AssaultFish {
 
         @Override
         public void mousePressed(MouseEvent e) {
-            if (SwingUtilities.isLeftMouseButton(e)) {
-                e = translateToGrid(e);
-                workClick(e.getX(), e.getY());
-            } else if (SwingUtilities.isRightMouseButton(e)) {
-                e = translateToGrid(e);
-                throwFish(e.getX(), e.getY());
-            } else if (SwingUtilities.isMiddleMouseButton(e)) {
+            if (SwingUtilities.isMiddleMouseButton(e) || (SwingUtilities.isLeftMouseButton(e) && e.isControlDown())) {
                 e = translateToGrid(e);
                 String description = "";
                 MapCell tile = map[e.getX()][e.getY()];
@@ -771,6 +787,18 @@ public class AssaultFish {
                 }
 
                 printOut(description);
+            } else if (SwingUtilities.isLeftMouseButton(e)) {
+                e = translateToGrid(e);
+                if (selectedFish == null) {
+                    workClick(e.getX(), e.getY());
+                } else {
+                    throwFish(e.getX(), e.getY());
+                }
+            } else if (SwingUtilities.isRightMouseButton(e)) {
+                if(selectedFish != null){
+                    selectedFish = null;
+                    updateFishInventoryPanel();
+                }
             }
         }
 
@@ -808,7 +836,7 @@ public class AssaultFish {
 
         TextCellFactory fishingFactory = new TextCellFactory(textFactory);
 
-        fishingFactory.initializeBySize(mapPanel.getCellWidth() / 2, mapPanel.getCellHeight() / 2, new Font(font.getFontName(), Font.BOLD, font.getSize() + 2));//a little extra size in case the switch away from bold matters
+        fishingFactory.initializeBySize((int) (mapPanel.getCellWidth() / widthScale), (int) (mapPanel.getCellHeight() / heightScale), new Font(font.getFontName(), Font.BOLD, font.getSize() + 2));//a little extra size in case the switch away from bold matters
         fishingViewPanel = new SwingPane(fishWidth, fishHeight, fishingFactory);
         fishingLayers.setLayer(fishingViewPanel, JLayeredPane.DEFAULT_LAYER);
         fishingLayers.add(fishingViewPanel);

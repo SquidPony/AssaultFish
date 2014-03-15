@@ -1,6 +1,6 @@
 package assaultfish.physical;
 
-import squidpony.squidcolor.SColor;
+import squidpony.squidmath.RNG;
 
 /**
  * This class represents an enemy creature.
@@ -9,11 +9,18 @@ import squidpony.squidcolor.SColor;
  */
 public class Creature extends Item {
 
-    public static final Creature //this is a list of the various monster templatespublic static final Monster //this is a list of the various monster templatespublic static final Creature //this is a list of the various monster templatespublic static final Monster //this is a list of the various monster templates
-            SNOWMAN = new Creature("snowman", 5, "☃", SColor.ALICE_BLUE),
-            PLAYER = new Creature("player", 10, "☺", SColor.BRIGHT_TURQUOISE);
+    public static final Creature SNOWMAN = new Creature("snowman", 5, "☃", Element.AIR),
+            SANDMAN = new Creature("sandman", 5, "☃", Element.SAND),
+            TARMAN = new Creature("tarman", 5, "☃", Element.TAR),
+            ACIDMAN = new Creature("acidman", 5, "☃", Element.ACID),
+            MAGICMAN = new Creature("magicman", 5, "☃", Element.MANA),
+            PLAYER = new Creature("player", 10, "☺", Element.BLOOD);
 
     public int health, strength;
+
+    public static Creature getRandomMonster() {
+        return new RNG().getRandomElement(new Creature[]{SNOWMAN, SANDMAN, TARMAN, ACIDMAN, MAGICMAN});
+    }
 
     /**
      * Creates a new monster.
@@ -23,8 +30,9 @@ public class Creature extends Item {
      * @param symbol
      * @param color
      */
-    public Creature(String name, int health, String symbol, SColor color) {
-        super(name,  symbol, color);
+    public Creature(String name, int health, String symbol, Element element) {
+        super(name, symbol, element);
+        this.name = name;
         this.health = health;
     }
 

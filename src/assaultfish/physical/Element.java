@@ -12,16 +12,16 @@ import squidpony.squidmath.RNG;
  */
 public enum Element {
 
-    WATER("water", "watery", SColor.AZUL),
-    AIR("air", "cloudy", SColor.ALICE_BLUE),
-    ACID("acid", "corrosive", SColor.CHARTREUSE),
-    TAR("tar", "tarred", SColor.STOREROOM_BROWN),
-    SAND("sand", "sandy", SColor.KHAKI),
-    BLOOD("blood", "bloody", SColor.SCARLET),
-    MAGMA("magma", "heated", SColor.SAFETY_ORANGE),
-    MANA("mana", "mystical", SColor.ROYAL_PURPLE);
+    WATER("water", "watery", "soaks", "soaked", SColor.AZUL),
+    AIR("air", "cloudy", "gusts", "gusted", SColor.ALICE_BLUE),
+    ACID("acid", "corrosive", "melts", "melted", SColor.CHARTREUSE),
+    TAR("tar", "goopy", "tars", "tarred", SColor.STOREROOM_BROWN),
+    SAND("sand", "sandy", "sandblasts", "sandblasted", SColor.KHAKI),
+    BLOOD("blood", "vampiric", "sanguinates", "sanguinated", SColor.SCARLET),
+    MAGMA("magma", "burning", "burns", "burned", SColor.SAFETY_ORANGE),
+    MANA("mana", "mystical", "enchants", "enchanted", SColor.ROYAL_PURPLE);
 
-    public final String name, adjective;
+    public final String name, adjective, presentVerb, pastVerb;
     public final SColor color;
     private static final HashMap<Element, HashMap<Element, Element>> transform = new HashMap<>();
 
@@ -125,9 +125,11 @@ public enum Element {
         transform.put(MANA, hm);
     }
 
-    private Element(String name, String adjective, SColor color) {
+    private Element(String name, String adjective, String presentVerb, String pastVerb, SColor color) {
         this.name = name;
         this.adjective = adjective;
+        this.presentVerb = presentVerb;
+        this.pastVerb = pastVerb;
         this.color = color;
     }
 
