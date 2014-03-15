@@ -9,17 +9,22 @@ import squidpony.squidmath.RNG;
  */
 public class Creature extends Item {
 
-    public static final Creature SNOWMAN = new Creature("snowman", 5, "☃", Element.AIR),
-            SANDMAN = new Creature("sandman", 5, "☃", Element.SAND),
-            TARMAN = new Creature("tarman", 5, "☃", Element.TAR),
-            ACIDMAN = new Creature("acidman", 5, "☃", Element.ACID),
-            MAGICMAN = new Creature("magicman", 5, "☃", Element.MANA),
+    private static final RNG rng = new RNG();
+
+    public static final Creature AIRMAN = new Creature("man", 5, "☃", Element.AIR),
+            SANDMAN = new Creature("man", 5, "☃", Element.SAND),
+            TARMAN = new Creature("man", 5, "☃", Element.TAR),
+            ACIDMAN = new Creature("man", 5, "☃", Element.ACID),
+            MAGICMAN = new Creature("man", 5, "☃", Element.MANA),
+            BLOODMAN = new Creature("man", 5, "☃", Element.BLOOD),
+            MAGMAMAN = new Creature("man", 5, "☃", Element.MAGMA),
+            WATERMAN = new Creature("man", 5, "☃", Element.WATER),
             PLAYER = new Creature("player", 5, "☺", Element.BLOOD);
 
     public int health, strength;
 
     public static Creature getRandomMonster() {
-        return new RNG().getRandomElement(new Creature[]{SNOWMAN, SANDMAN, TARMAN, ACIDMAN, MAGICMAN});
+        return new Creature(rng.getRandomElement(new Creature[]{AIRMAN, SANDMAN, TARMAN, ACIDMAN, MAGICMAN, BLOODMAN, MAGMAMAN, WATERMAN}));
     }
 
     /**
@@ -32,7 +37,6 @@ public class Creature extends Item {
      */
     public Creature(String name, int health, String symbol, Element element) {
         super(name, symbol, element);
-        this.name = name;
         this.health = health;
     }
 

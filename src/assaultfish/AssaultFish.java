@@ -61,7 +61,7 @@ import squidpony.squidutility.graph.PointGraph;
  */
 public class AssaultFish {
 
-    private static final String version = "1.2";
+    private static final String version = "1.3";
 
     private static final double widthScale = 1.2,
             heightScale = 1.2;
@@ -169,7 +169,7 @@ public class AssaultFish {
             if (!soundOn.equals("on")) {
                 sound.setMusicVolume(0);
             }
-            sound.playMusic("80s");
+            sound.playMusic("Eden");
         } catch (MediaException e) {
 //            System.err.println(e.getLocalizedMessage());
         }
@@ -495,8 +495,8 @@ public class AssaultFish {
     }
 
     /**
-     * This is the main game loop method that takes input and process the
-     * results. Right now it doesn't loop!
+     * This is the main game loop method that takes input and process the results. Right now it
+     * doesn't loop!
      */
     private void runTurn() {
         updateMap();
@@ -609,6 +609,7 @@ public class AssaultFish {
                                 reactToElementChange(x, y, selectedFish.element);
                                 fishThrowingPanel.placeCharacter(x, y, '*', selectedFish.color);
                                 modified[x][y] = true;
+                                mapPanel.placeCharacter(x, y, map[x][y].getSymbol().charAt(0), map[x][y].foregroundColor(), map[x][y].backgroundColor());
                             }
                         }
                     }
@@ -623,9 +624,10 @@ public class AssaultFish {
         }
 
         removeFish(selectedFish);
+        fishThrowingPanel.erase();
+        fishThrowingPanel.refresh();
         updateOverlay();
         layers.add(overlayPanel);
-        fishThrowingPanel.erase();
         updateMap();
         runTurn();
     }
@@ -702,11 +704,10 @@ public class AssaultFish {
                     }
                     break;
             }
-
         }
 
         c = map[x][y].creature;
-        //check for creature destruction
+        //check for creature change
         if (c != null && c != player) {
             map[x][y].creature = new Creature(c.name, c.health, c.symbol, c.element.combine(e));
             monsters.remove(c);
@@ -759,13 +760,12 @@ public class AssaultFish {
         tf = map[x][y].feature;
         if (c == player) {
             if (tf != null && tf.blocking) {
-                printOut("You are crushed by the sudden appearance of the " + tf.name);
-                die();
+                die("You are crushed by the sudden appearance of a " + tf.name);
             } else if (map[x][y].terrain.blocking) {
-                printOut("You don't survive the sudden appearance of the " + map[x][y].terrain.name);
-                die();
+                die("You don't survive the sudden appearance of a " + map[x][y].terrain.name);
             }
         }
+
     }
 
     private void win() {
@@ -801,9 +801,9 @@ public class AssaultFish {
             int y = 3;
             int left = 5;
 
-            text = "ASSAULT FISH  v" + version;
-            x = (winPane.getGridWidth() - text.length()) / 2;//centered
-            winPane.placeHorizontalString(x, y, text, heading, sc);
+            text = "--  press right mouse to restart or left mouse to quit --";
+            x = (diePane.getGridWidth() - text.length()) / 2;//centered
+            diePane.placeHorizontalString(x, y, text, SColor.ELECTRIC_GREEN, sc);
             y += 2;
 
             text = "Your peaceful life as a fisherman has come to an end.";
@@ -831,7 +831,7 @@ public class AssaultFish {
             winPane.placeHorizontalString(x, y, text);
             y += 1;
 
-            text = "--  press left mouse to restart or right mouse to quit --";
+            text = "--  press right mouse to restart or left mouse to quit --";
             x = (winPane.getGridWidth() - text.length()) / 2;//centered
             y = height - 3;
             winPane.placeHorizontalString(x, y, text, SColor.ELECTRIC_GREEN, sc);
@@ -839,20 +839,19 @@ public class AssaultFish {
             winPane.refresh();
             layers.setLayer(winPane, JLayeredPane.DRAG_LAYER);
 
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ex) {
-            }
+            final long readTime = System.currentTimeMillis() + 200;
             winPane.addMouseListener(new MouseInputAdapter() {
 
                 @Override
                 public void mousePressed(MouseEvent e) {
-                    if (SwingUtilities.isLeftMouseButton(e)) {
-                        layers.remove(winPane);
-                        layers.repaint();
-                        restart();
-                    } else {
-                        exiting();
+                    if (System.currentTimeMillis() > readTime) {
+                        if (SwingUtilities.isLeftMouseButton(e)) {
+                            exiting();
+                        } else {
+                            layers.remove(winPane);
+                            layers.repaint();
+                            restart();
+                        }
                     }
                 }
 
@@ -861,7 +860,7 @@ public class AssaultFish {
         layers.add(winPane);
     }
 
-    private void die() {
+    private void die(String reason) {
         canClick = false;
         if (diePane == null) {
             diePane = new SwingPane(width, height, textFactory);
@@ -894,9 +893,9 @@ public class AssaultFish {
             int y = 3;
             int left = 5;
 
-            text = "ASSAULT FISH  v" + version;
+            text = "--  press right mouse to restart or left mouse to quit --";
             x = (diePane.getGridWidth() - text.length()) / 2;//centered
-            diePane.placeHorizontalString(x, y, text, heading, sc);
+            diePane.placeHorizontalString(x, y, text, SColor.ELECTRIC_GREEN, sc);
             y += 2;
 
             text = "Your peaceful life as a fisherman has come to an end.";
@@ -918,9 +917,18 @@ public class AssaultFish {
             text = "by vicious elemental beings.";
             x = left;//left justified
             diePane.placeHorizontalString(x, y, text);
+            y += 3;
+
+            text = "You died because:";
+            x = left;//left justified
+            diePane.placeHorizontalString(x, y, text, SColor.SAFETY_ORANGE, sc);
+            y += 1;
+            text = reason;
+            x = left;//left justified
+            diePane.placeHorizontalString(x, y, text);
             y += 1;
 
-            text = "--  press left mouse to restart or right mouse to quit --";
+            text = "--  press right mouse to restart or left mouse to quit --";
             x = (diePane.getGridWidth() - text.length()) / 2;//centered
             y = height - 3;
             diePane.placeHorizontalString(x, y, text, SColor.ELECTRIC_GREEN, sc);
@@ -928,20 +936,19 @@ public class AssaultFish {
             diePane.refresh();
             layers.setLayer(diePane, JLayeredPane.DRAG_LAYER);
 
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ex) {
-            }
+            final long readTime = System.currentTimeMillis() + 200;
             diePane.addMouseListener(new MouseInputAdapter() {
 
                 @Override
                 public void mousePressed(MouseEvent e) {
-                    if (SwingUtilities.isLeftMouseButton(e)) {
-                        layers.remove(diePane);
-                        layers.repaint();
-                        restart();
-                    } else {
-                        exiting();
+                    if (System.currentTimeMillis() > readTime) {
+                        if (SwingUtilities.isLeftMouseButton(e)) {
+                            exiting();
+                        } else {
+                            layers.remove(winPane);
+                            layers.repaint();
+                            restart();
+                        }
                     }
                 }
 
@@ -964,25 +971,24 @@ public class AssaultFish {
     private void removeFish(Fish fish) {
         int n = fishInventory.get(fish.element).get(fish.size);
         if (n > 0) {
-            if (n == 1) {
-                printOut("That was your last " + fish.name + "!");
-                selectedFish = null;
-            } else {
-                printOut("Throwing a " + fish.name + ".");
-            }
+//            if (n == 1) {
+//                printOut("That was your last " + fish.name + "!");
+            selectedFish = null;
+//            } else {
+//                printOut("Throwing a " + fish.name + ".");
+//            }
             fishInventory.get(fish.element).put(fish.size, n - 1);
             updateFishInventoryPanel();
         } else {
-            printOut("No more " + fish.name + " in your inventory.");
+//            printOut("No more " + fish.name + " in your inventory.");
         }
     }
 
     /**
-     * Attempts to move in the given direction. If a monster is in that
-     * direction then the player attacks the monster.
+     * Attempts to move in the given direction. If a monster is in that direction then the player
+     * attacks the monster.
      *
-     * Returns false if there was a wall in the direction and so no action was
-     * taken.
+     * Returns false if there was a wall in the direction and so no action was taken.
      *
      * @param dir
      * @return
@@ -1172,8 +1178,37 @@ public class AssaultFish {
             placeWallChunk(Terrain.STONE, null);
         }
 
+        String[] mapDrawing = new String[]{
+            "############..####",
+            "#....##..........#",
+            "#....##..........#",
+            "#.........####....",
+            "#.........####....",
+            "..........####...#",
+            "#................#",
+            "#####..###########"
+        };
+
+        int x = (width / 2) - 2;
+        int y = (height / 2) - 4;
+        for (String s : mapDrawing) {
+            for (char c : s.toCharArray()) {
+                switch (c) {
+                    case '#':
+                        map[x][y] = new MapCell(Terrain.STONE, TerrainFeature.STONE_WALL);
+                        break;
+                    case '.':
+                        map[x][y] = new MapCell(Terrain.STONE);
+                        break;
+                }
+                x++;
+            }
+            y++;
+            x = (width / 2) - 2;
+        }
+
         for (int i = 0; i < 20; i++) {
-            Creature creature = new Creature(Creature.getRandomMonster());
+            Creature creature = Creature.getRandomMonster();
             placeMonster(creature);
             monsters.add(creature);
         }
@@ -1188,8 +1223,8 @@ public class AssaultFish {
     }
 
     /**
-     * Randomly places a group of walls in the map. This replaces whatever was
-     * in that location previously.
+     * Randomly places a group of walls in the map. This replaces whatever was in that location
+     * previously.
      */
     private void placeWallChunk(Terrain t, TerrainFeature tf) {
         int spread = 5;
@@ -1249,8 +1284,8 @@ public class AssaultFish {
     }
 
     /**
-     * Moves the monster given if possible. Monsters will not move into walls,
-     * other monsters, or the player.
+     * Moves the monster given if possible. Monsters will not move into walls, other monsters, or
+     * the player.
      *
      * @param monster
      */
@@ -1298,7 +1333,7 @@ public class AssaultFish {
         player.health--;
         printOut("The " + cause + " hurt you!  You have " + player.health + " health now.");
         if (player.health <= 0) {
-            die();
+            die("The " + cause + " finished you off.");
         }
         updateFishInventoryPanel();
     }
@@ -1800,8 +1835,8 @@ public class AssaultFish {
     /**
      * Returns the y position of the last space before the terrain bed.
      *
-     * To allow for bounds safety, this method will return 0 as the result if
-     * the bed reaches the top rather than -1.
+     * To allow for bounds safety, this method will return 0 as the result if the bed reaches the
+     * top rather than -1.
      *
      * @param x
      * @return
