@@ -11,7 +11,9 @@ import assaultfish.physical.TerrainFeature;
 import assaultfish.physical.Treasure;
 import java.awt.BorderLayout;
 import java.awt.Font;
+import java.awt.GraphicsEnvironment;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
@@ -54,15 +56,25 @@ import squidpony.squidsound.SoundManager;
  */
 public class AssaultFish {
 
-    private static final int width = 80, height = 40;
-    private static final double widthScale = 1.2, heightScale = 1.2;
-    private static final int fishHeight = (int) ((height - 3) * heightScale), fishWidth = (int) (width * widthScale), fontSize = 20;
-    private static final int largeTextScale = 4, liquidHeight = largeTextScale * 4, terrainWidth = largeTextScale * 2 + 1;
+    private static final double widthScale = 1.2,
+            heightScale = 1.2;
+    private static final int width = 80,
+            height = 40,
+            fishHeight = (int) ((height - 3) * heightScale),
+            fishWidth = (int) (width * widthScale),
+            fontSize = 20,
+            largeTextScale = 4,
+            liquidHeight = largeTextScale * 4,
+            terrainWidth = largeTextScale * 2 + 1,
+            inventoryHeight = 6;
     private static final int maxFish = 6;
     private static final int overlayAlpha = 100;
-    private static final Font font = new Font("Arial Unicode MS", Font.PLAIN, fontSize);
+    private static Font font = new Font("Arial Unicode MS", Font.PLAIN, fontSize);
     private static final String version = "1.1";
     private static volatile long outputEndTime;
+    private static final Rectangle helpIconLocation = new Rectangle(width - 5, 1, 4, 1),
+            menuIconLocation = new Rectangle(width - 5, 2, 4, 1),
+            exitIconLocation = new Rectangle(width - 5, 3, 4, 1);
 
 //    private static final String fishingPole = "🎣",//fishing pole and fish
 //            whale = "🐋",//whale
@@ -183,6 +195,8 @@ public class AssaultFish {
             helpPane = new SwingPane(width, height, textFactory);
             helpPane.erase();
             SColor fade = SColor.DARK_GRAY;
+            SColor heading = SColor.TEA_GREEN;
+            SColor command = SColor.YELLOW;
             SColor sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 150);
             for (int x = 0; x < helpPane.getGridWidth(); x++) {
                 helpPane.clearCell(x, 0, sc);
@@ -210,7 +224,7 @@ public class AssaultFish {
 
             text = "ASSAULT FISH  v" + version;
             x = (helpPane.getGridWidth() - text.length()) / 2;//centered
-            helpPane.placeHorizontalString(x, y, text, SColor.BRIGHT_TURQUOISE, sc);
+            helpPane.placeHorizontalString(x, y, text, heading, sc);
             y += 2;
 
             text = "Your peaceful life as a fisherman has come to an end.";
@@ -240,7 +254,7 @@ public class AssaultFish {
 
             text = "Main Map Controls";
             x = (helpPane.getGridWidth() - text.length()) / 2;//centered
-            helpPane.placeHorizontalString(x, y, text, SColor.BRIGHT_TURQUOISE, sc);
+            helpPane.placeHorizontalString(x, y, text, heading, sc);
             y += 1;
 
             text = "Without a fish selected for throwing:";
@@ -248,13 +262,27 @@ public class AssaultFish {
             helpPane.placeHorizontalString(x, y, text);
             y += 1;
 
-            text = "Left click - move that direction.     Ctrl-Left click - examine";
+            text = "Left click";
             x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text, command, sc);
+            x += text.length();
+            text = " - move";
             helpPane.placeHorizontalString(x, y, text);
             y += 1;
 
-            text = "Left click on fish inventory - select a fish for throwing";
+            text = "Ctrl-Left click";
+            x = left;
+            helpPane.placeHorizontalString(x, y, text, command, sc);
+            x += text.length();
+            text = " - examine";
+            helpPane.placeHorizontalString(x, y, text);
+            y += 1;
+
+            text = "Left click on fish";
             x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text, command, sc);
+            x += text.length();
+            text = " - select fish";
             helpPane.placeHorizontalString(x, y, text);
             y += 2;
 
@@ -263,18 +291,35 @@ public class AssaultFish {
             helpPane.placeHorizontalString(x, y, text);
             y += 1;
 
-            text = "Left click - throw the fish      Right click - deselect fish.";
+            text = "Left click";
             x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text, command, sc);
+            x += text.length();
+            text = " - throw fish";
             helpPane.placeHorizontalString(x, y, text);
             y += 1;
 
-            text = "Left click on fish inventory - select a new fish";
-            x = left;//left justified
+            text = "Right click";
+            x = left;
+            helpPane.placeHorizontalString(x, y, text, command, sc);
+            x += text.length();
+            text = " - deselect fish";
             helpPane.placeHorizontalString(x, y, text);
             y += 1;
 
-            text = "Left click on the slected fish - deselect fish.";
+            text = "Left click on fish";
             x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text, command, sc);
+            x += text.length();
+            text = " - select a new fish";
+            helpPane.placeHorizontalString(x, y, text);
+            y += 1;
+
+            text = "Left click on the slected fish";
+            x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text, command, sc);
+            x += text.length();
+            text = " - deselect fish";
             helpPane.placeHorizontalString(x, y, text);
             y += 1;
 
@@ -322,8 +367,8 @@ public class AssaultFish {
     }
 
     /**
-     * This is the main game loop method that takes input and process the results. Right now it
-     * doesn't loop!
+     * This is the main game loop method that takes input and process the
+     * results. Right now it doesn't loop!
      */
     private void runTurn() {
         updateMap();
@@ -435,10 +480,11 @@ public class AssaultFish {
     }
 
     /**
-     * Attempts to move in the given direction. If a monster is in that direction then the player
-     * attacks the monster.
+     * Attempts to move in the given direction. If a monster is in that
+     * direction then the player attacks the monster.
      *
-     * Returns false if there was a wall in the direction and so no action was taken.
+     * Returns false if there was a wall in the direction and so no action was
+     * taken.
      *
      * @param dir
      * @return
@@ -641,8 +687,8 @@ public class AssaultFish {
     }
 
     /**
-     * Randomly places a group of walls in the map. This replaces whatever was in that location
-     * previously.
+     * Randomly places a group of walls in the map. This replaces whatever was
+     * in that location previously.
      */
     private void placeWallChunk(Terrain t, TerrainFeature tf) {
         int spread = 5;
@@ -680,8 +726,8 @@ public class AssaultFish {
     }
 
     /**
-     * Moves the monster given if possible. Monsters will not move into walls, other monsters, or
-     * the player.
+     * Moves the monster given if possible. Monsters will not move into walls,
+     * other monsters, or the player.
      *
      * @param monster
      */
@@ -747,12 +793,30 @@ public class AssaultFish {
             //don't do anything if it failed, the default Java icon will be used
         }
         frame.setBackground(SColor.BLACK);
+        frame.setUndecorated(true);
 
         layers = new JLayeredPane();
         frame.add(layers, BorderLayout.WEST);
 
+//        GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+//        int screenWidth = gd.getDisplayMode().getWidth();
+//        int screenHeight = gd.getDisplayMode().getHeight();
+//        int bufferVertical = 30;//guess at system tray and jframe bar
+//        int bufferHorizontal = 2;//guess at side width
+        Rectangle winSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+        int screenWidth = winSize.width;
+        int screenHeight = winSize.height;
+        int bufferHorizontal = 0;
+        int bufferVertical = 0;
+
         mapPanel = new SwingPane(width, height, font);
         mapPanel.setDefaultBackground(SColor.BLACK);
+        while (mapPanel.getCellWidth() * (mapPanel.getGridWidth()) >= screenWidth + bufferHorizontal
+                || mapPanel.getCellHeight() * (mapPanel.getGridHeight() + 6) >= screenHeight + bufferVertical) {
+            mapPanel = new SwingPane(width, height, font);
+            mapPanel.setDefaultBackground(SColor.BLACK);
+            font = new Font(font.getName(), font.getStyle(), font.getSize() - 1);
+        }
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 mapPanel.clearCell(x, y);
@@ -794,6 +858,7 @@ public class AssaultFish {
 
         frame.pack();
 
+        fishInventoryPanel.addMouseListener(new MenuMouse(fishInventoryPanel.getCellWidth(), fishInventoryPanel.getCellHeight()));
         mapMouse = new MapMouse(mapPanel.getCellWidth(), mapPanel.getCellHeight());
         inventoryMouse = new FishInventoryMouse(fishInventoryPanel.getCellWidth(), fishInventoryPanel.getCellHeight());
 
@@ -831,7 +896,41 @@ public class AssaultFish {
             x += maxFish + 1;
         }
 
+        p.placeHorizontalString(helpIconLocation.x, helpIconLocation.y, "HELP", SColor.CREAM, p.getBackground());
+        p.placeHorizontalString(exitIconLocation.x, exitIconLocation.y, "EXIT", SColor.BRILLIANT_ROSE, p.getBackground());
+        //TODO -- add text for menu once menu is available
+
         updateFishInventoryPanel();
+    }
+
+    private class MenuMouse extends MouseInputAdapter {
+
+        private final int cellWidth;
+        private final int cellHeight;
+
+        public MenuMouse(int cellWidth, int cellHeight) {
+            this.cellWidth = cellWidth;
+            this.cellHeight = cellHeight;
+        }
+
+        private MouseEvent translateToGrid(MouseEvent e) {
+            int x = e.getX() / cellWidth;
+            int y = e.getY() / cellHeight;
+            return new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiersEx(), x, y, e.getClickCount(), e.isPopupTrigger(), e.getButton());
+        }
+
+        @Override
+        public void mousePressed(MouseEvent e) {
+            e = translateToGrid(e);
+            if (helpIconLocation.contains(e.getX(), e.getY()) && helpPane.getParent() == null) {
+                showHelp();
+            } else if (exitIconLocation.contains(e.getX(), e.getY())) {
+                exiting();
+            } else if (menuIconLocation.contains(e.getX(), e.getY())) {
+                //TODO -- add generalized menu
+            }
+        }
+
     }
 
     private class FishInventoryMouse extends MouseInputAdapter {
@@ -1099,8 +1198,8 @@ public class AssaultFish {
     /**
      * Returns the y position of the last space before the terrain bed.
      *
-     * To allow for bounds safety, this method will return 0 as the result if the bed reaches the
-     * top rather than -1.
+     * To allow for bounds safety, this method will return 0 as the result if
+     * the bed reaches the top rather than -1.
      *
      * @param x
      * @return
