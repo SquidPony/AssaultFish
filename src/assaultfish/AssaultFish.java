@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeMap;
+import javafx.scene.media.MediaException;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
@@ -44,6 +45,7 @@ import static squidpony.squidgrid.util.Direction.*;
 import squidpony.squidgrid.util.RadiusStrategy;
 import squidpony.squidmath.PerlinNoise;
 import squidpony.squidmath.RNG;
+import squidpony.squidsound.SoundManager;
 
 /**
  * This class starts up the game.
@@ -79,7 +81,7 @@ public class AssaultFish {
     private TextCellFactory fishText;
 
     private JFrame frame;
-    private SwingPane mapPanel, outputPanel, meterPanel, fishingViewPanel, fishPane, largeTextPane;
+    private SwingPane mapPanel, outputPanel, meterPanel, fishingViewPanel, fishPane, largeTextPane, helpPane;
     private JPanel fishingMasterPanel;
     private JLayeredPane layers;
     private final MeterListener meterListener = new MeterListener();
@@ -123,10 +125,20 @@ public class AssaultFish {
             skyColor = SColor.ALICE_BLUE,
             playerColor = SColor.BETEL_NUT_DYE;
 
+    private static SoundManager sound;
+
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
+        try {
+            sound = new SoundManager();
+            sound.loadMediaResources(new File("sound"), true);
+            sound.playMusic("80s");
+        } catch (MediaException e) {
+            System.err.println(e.getLocalizedMessage());
+        }
+
         Fish.initSymbols(font);
         if (SColorFactory.pallet("meter") == null) {
             ArrayList<SColor> pallet = SColorFactory.asGradient(SColor.RED, SColor.ORANGE);
@@ -155,13 +167,130 @@ public class AssaultFish {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
 
+        showHelp();
+
         player = new Creature(Creature.PLAYER);
         player.color = SColor.CORNFLOWER_BLUE;
 
         createMap();
         updateMap();
-        printOut("Welcome to Assault Fish!    This is version " + version);
+//        printOut("Welcome to Assault Fish!    This is version " + version);
         flipMouseControl(true);
+    }
+
+    private void showHelp() {
+        if (helpPane == null) {
+            helpPane = new SwingPane(width, height, textFactory);
+            helpPane.erase();
+            SColor fade = SColor.DARK_GRAY;
+            SColor sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 150);
+            for (int x = 0; x < helpPane.getGridWidth(); x++) {
+                helpPane.clearCell(x, 0, sc);
+                helpPane.clearCell(x, 1, sc);
+                helpPane.clearCell(x, helpPane.getGridHeight() - 1, sc);
+                helpPane.clearCell(x, helpPane.getGridHeight() - 2, sc);
+            }
+            for (int y = 0; y < helpPane.getGridHeight(); y++) {
+                helpPane.clearCell(0, y, sc);
+                helpPane.clearCell(1, y, sc);
+                helpPane.clearCell(helpPane.getGridWidth() - 1, y, sc);
+                helpPane.clearCell(helpPane.getGridWidth() - 2, y, sc);
+            }
+            sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 240);
+            for (int x = 2; x < helpPane.getGridWidth() - 2; x++) {
+                for (int y = 2; y < helpPane.getGridHeight() - 2; y++) {
+                    helpPane.clearCell(x, y, sc);
+                }
+            }
+
+            String text;
+            int x;
+            int y = 2;
+            int left = 5;
+
+            text = "ASSAULT FISH  v" + version;
+            x = (helpPane.getGridWidth() - text.length()) / 2;//centered
+            helpPane.placeHorizontalString(x, y, text, SColor.BRIGHT_TURQUOISE, sc);
+            y += 2;
+
+            text = "Your peaceful life as a fisherman has come to an end.";
+            x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text);
+            y += 1;
+
+            text = "A horde of elementals has decended upon the land and it is your duty";
+            x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text);
+            y += 1;
+
+            text = "to fight them any way you can! And that means using the fishing skills";
+            x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text);
+            y += 1;
+
+            text = "of your forefathers to fish from the many local elemental pools and";
+            x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text);
+            y += 1;
+
+            text = "strategically throw your explosive catch at the enemy!";
+            x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text);
+            y += 2;
+
+            text = "Main Map Controls";
+            x = (helpPane.getGridWidth() - text.length()) / 2;//centered
+            helpPane.placeHorizontalString(x, y, text, SColor.BRIGHT_TURQUOISE, sc);
+            y += 1;
+
+            text = "Without a fish selected for throwing:";
+            x = (helpPane.getGridWidth() - text.length()) / 2;//centered
+            helpPane.placeHorizontalString(x, y, text);
+            y += 1;
+
+            text = "Left click - move that direction.     Ctrl-Left click - examine";
+            x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text);
+            y += 1;
+
+            text = "Left click on fish inventory - select a fish for throwing";
+            x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text);
+            y += 2;
+
+            text = "With a fish selected for throwing:";
+            x = (helpPane.getGridWidth() - text.length()) / 2;//centered
+            helpPane.placeHorizontalString(x, y, text);
+            y += 1;
+
+            text = "Left click - throw the fish      Right click - deselect fish.";
+            x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text);
+            y += 1;
+
+            text = "Left click on fish inventory - select a new fish";
+            x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text);
+            y += 1;
+
+            text = "Left click on the slected fish - deselect fish.";
+            x = left;//left justified
+            helpPane.placeHorizontalString(x, y, text);
+            y += 1;
+
+            helpPane.refresh();
+            layers.setLayer(helpPane, JLayeredPane.DRAG_LAYER);
+
+            helpPane.addMouseListener(new MouseInputAdapter() {
+
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    layers.remove(helpPane);
+                }
+
+            });
+        }
+        layers.add(helpPane);
     }
 
     private void goFish() {
@@ -587,10 +716,10 @@ public class AssaultFish {
         }
     }
 
-    private void checkForReactions(){
-        
+    private void checkForReactions() {
+
     }
-    
+
     /**
      * Moves all the monsters, one at a time.
      */
@@ -638,7 +767,7 @@ public class AssaultFish {
         }
 
         textFactory.initializeBySize(mapPanel.getCellWidth(), mapPanel.getCellHeight(), font);
-        mapPanel.placeHorizontalString(width / 2 - 4, height / 2, "Loading");
+//        mapPanel.placeHorizontalString(width / 2 - 4, height / 2, "Loading");
         mapPanel.refresh();
         layers.setPreferredSize(mapPanel.getPreferredSize());
         layers.setLayer(mapPanel, JLayeredPane.DEFAULT_LAYER);
@@ -795,7 +924,7 @@ public class AssaultFish {
                     throwFish(e.getX(), e.getY());
                 }
             } else if (SwingUtilities.isRightMouseButton(e)) {
-                if(selectedFish != null){
+                if (selectedFish != null) {
                     selectedFish = null;
                     updateFishInventoryPanel();
                 }
