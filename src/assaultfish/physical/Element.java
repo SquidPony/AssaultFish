@@ -1,7 +1,6 @@
 package assaultfish.physical;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import squidpony.squidcolor.SColor;
 import squidpony.squidmath.RNG;
 
@@ -15,7 +14,7 @@ public enum Element {
     WATER("water", "watery", "soaks", "soaked", SColor.AZUL),
     AIR("air", "cloudy", "gusts", "gusted", SColor.ALICE_BLUE),
     ACID("acid", "corrosive", "melts", "melted", SColor.CHARTREUSE),
-    TAR("tar", "goopy", "tars", "tarred", SColor.STOREROOM_BROWN),
+    TAR("tar", "goopy", "tars", "tarred", SColor.ALOEWOOD),
     SAND("sand", "sandy", "sandblasts", "sandblasted", SColor.KHAKI),
     BLOOD("blood", "vampiric", "sanguinates", "sanguinated", SColor.SCARLET),
     MAGMA("magma", "burning", "burns", "burned", SColor.SAFETY_ORANGE),

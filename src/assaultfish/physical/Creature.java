@@ -14,7 +14,7 @@ public class Creature extends Item {
             TARMAN = new Creature("tarman", 5, "☃", Element.TAR),
             ACIDMAN = new Creature("acidman", 5, "☃", Element.ACID),
             MAGICMAN = new Creature("magicman", 5, "☃", Element.MANA),
-            PLAYER = new Creature("player", 10, "☺", Element.BLOOD);
+            PLAYER = new Creature("player", 5, "☺", Element.BLOOD);
 
     public int health, strength;
 
@@ -28,7 +28,7 @@ public class Creature extends Item {
      * @param name
      * @param health
      * @param symbol
-     * @param color
+     * @param element
      */
     public Creature(String name, int health, String symbol, Element element) {
         super(name, symbol, element);
