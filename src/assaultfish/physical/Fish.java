@@ -1,8 +1,5 @@
 package assaultfish.physical;
 
-import assaultfish.physical.Element;
-import assaultfish.physical.Item;
-import assaultfish.physical.Size;
 import java.awt.Font;
 import java.util.ArrayList;
 import squidpony.squidcolor.SColorFactory;

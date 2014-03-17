@@ -11,11 +11,36 @@ import assaultfish.physical.TerrainFeature;
 import assaultfish.physical.Treasure;
 import java.awt.BorderLayout;
 import java.awt.Font;
+import java.awt.FontFormatException;
 import java.awt.GraphicsEnvironment;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import static java.awt.event.KeyEvent.VK_B;
+import static java.awt.event.KeyEvent.VK_DOWN;
+import static java.awt.event.KeyEvent.VK_H;
+import static java.awt.event.KeyEvent.VK_J;
+import static java.awt.event.KeyEvent.VK_K;
+import static java.awt.event.KeyEvent.VK_L;
+import static java.awt.event.KeyEvent.VK_LEFT;
+import static java.awt.event.KeyEvent.VK_N;
+import static java.awt.event.KeyEvent.VK_NUMPAD1;
+import static java.awt.event.KeyEvent.VK_NUMPAD2;
+import static java.awt.event.KeyEvent.VK_NUMPAD3;
+import static java.awt.event.KeyEvent.VK_NUMPAD4;
+import static java.awt.event.KeyEvent.VK_NUMPAD5;
+import static java.awt.event.KeyEvent.VK_NUMPAD6;
+import static java.awt.event.KeyEvent.VK_NUMPAD7;
+import static java.awt.event.KeyEvent.VK_NUMPAD8;
+import static java.awt.event.KeyEvent.VK_NUMPAD9;
+import static java.awt.event.KeyEvent.VK_PERIOD;
+import static java.awt.event.KeyEvent.VK_RIGHT;
+import static java.awt.event.KeyEvent.VK_U;
+import static java.awt.event.KeyEvent.VK_UP;
+import static java.awt.event.KeyEvent.VK_Y;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -27,6 +52,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.TreeMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 import javafx.scene.media.MediaException;
 import javax.imageio.ImageIO;
@@ -78,7 +105,7 @@ public class AssaultFish {
             healthX = width - 15;
     private static final int maxFish = 6;
     private static final int overlayAlpha = 100;
-    private static Font font = new Font("Arial Unicode MS", Font.PLAIN, fontSize);
+    private static Font font;
     private static volatile long outputEndTime;
     private static final Rectangle helpIconLocation = new Rectangle(width - 5, 1, 4, 1),
             muteIconLocation = new Rectangle(width - 5, 2, 4, 1),
@@ -109,6 +136,7 @@ public class AssaultFish {
     private MeterListener meterListener;
     private FishMouse fishMouse;
     private MapMouse mapMouse;
+    private MapKeys mapKeys;
     private FishInventoryMouse inventoryMouse;
 
     private Creature player;
@@ -152,19 +180,22 @@ public class AssaultFish {
     private float[][] sightBlocking = new float[width][height];
 
     /*  ------------------------ Sound -------------------------*/
-    private static SoundManager sound;
+    private static final SoundManager sound;
     private static final String SOUND_PREF = "Sound Pref";
-    private static Preferences prefs;
+    private static final Preferences prefs;
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
+    static {
+        font = new Font("Arial Unicode MS", Font.PLAIN, fontSize);
+
+//        try {
+//            font = Font.createFont(Font.TRUETYPE_FONT, new File("font.ttf"));
+//        } catch (FontFormatException | IOException ex) {
+//        }
         prefs = Preferences.userNodeForPackage(assaultfish.AssaultFish.class);
         String soundOn = prefs.get(SOUND_PREF, "on"); // "a string"
 
+        sound = new SoundManager();
         try {
-            sound = new SoundManager();
             sound.loadMediaResources(new File("sound"), true);
             if (!soundOn.equals("on")) {
                 sound.setMusicVolume(0);
@@ -181,6 +212,12 @@ public class AssaultFish {
             pallet.addAll(SColorFactory.asGradient(SColor.YELLOW, SColor.ELECTRIC_GREEN));
             SColorFactory.addPallet("meter", pallet);
         }
+    }
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String[] args) {
         new AssaultFish().go();
     }
 
@@ -1439,6 +1476,7 @@ public class AssaultFish {
 
         fishInventoryPanel.addMouseListener(new MenuMouse(fishInventoryPanel.getCellWidth(), fishInventoryPanel.getCellHeight()));
         mapMouse = new MapMouse(mapPanel.getCellWidth(), mapPanel.getCellHeight());
+        mapKeys = new MapKeys();
         inventoryMouse = new FishInventoryMouse(fishInventoryPanel.getCellWidth(), fishInventoryPanel.getCellHeight());
 
         //add invisibly the fishing panels
@@ -1451,12 +1489,14 @@ public class AssaultFish {
             mapPanel.addMouseListener(mapMouse);
             mapPanel.addMouseMotionListener(mapMouse);
             mapPanel.addMouseWheelListener(mapMouse);
+            frame.addKeyListener(mapKeys);
             fishInventoryPanel.addMouseListener(inventoryMouse);
             frame.removeMouseListener(fishMouse);
         } else {
             mapPanel.removeMouseListener(mapMouse);
             mapPanel.removeMouseMotionListener(mapMouse);
             mapPanel.removeMouseWheelListener(mapMouse);
+            frame.removeKeyListener(mapKeys);
             fishInventoryPanel.removeMouseListener(inventoryMouse);
             frame.addMouseListener(fishMouse);
         }
@@ -1685,6 +1725,60 @@ public class AssaultFish {
 
     }
 
+    private class MapKeys extends KeyAdapter {
+
+        @Override
+        public void keyPressed(KeyEvent e) {
+            if (canClick) {
+                canClick = false;
+                Direction d = getDirectionFromKey(e.getExtendedKeyCode());
+                if (d != null) {
+                    workClick(d.deltaX + player.x, d.deltaY + player.y);
+                }
+                canClick = true;
+            }
+        }
+
+    }
+
+    private Direction getDirectionFromKey(int code) {
+        switch (code) {
+            case VK_LEFT:
+            case VK_NUMPAD4:
+            case VK_H:
+                return LEFT;
+            case VK_RIGHT:
+            case VK_NUMPAD6:
+            case VK_L:
+                return RIGHT;
+            case VK_UP:
+            case VK_NUMPAD8:
+            case VK_K:
+                return UP;
+            case VK_DOWN:
+            case VK_NUMPAD2:
+            case VK_J:
+                return DOWN;
+            case VK_NUMPAD1:
+            case VK_B:
+                return DOWN_LEFT;
+            case VK_NUMPAD3:
+            case VK_N:
+                return DOWN_RIGHT;
+            case VK_NUMPAD7:
+            case VK_Y:
+                return UP_LEFT;
+            case VK_NUMPAD9:
+            case VK_U:
+                return UP_RIGHT;
+            case VK_PERIOD:
+            case VK_NUMPAD5:
+                return NONE;
+            default:
+                return null;
+        }
+    }
+
     private void initFishingGUI() {
         JLayeredPane fishingLayers = new JLayeredPane();
 
@@ -1709,7 +1803,7 @@ public class AssaultFish {
         TextCellFactory largeFactory = new TextCellFactory();
         largeFactory.setAntialias(true);
         largeFactory.setFitCharacters("@");
-        largeFactory.initializeBySize(fishingViewPanel.getCellWidth() * largeTextScale, fishingViewPanel.getCellHeight() * largeTextScale, new Font(font.getFontName(), Font.BOLD, 192));
+        largeFactory.initializeBySize(fishingViewPanel.getCellWidth() * largeTextScale, fishingViewPanel.getCellHeight() * largeTextScale, new Font(font.getFontName(), Font.BOLD, 40));
         largeTextPane = new SwingPane(fishWidth / largeTextScale, fishHeight / largeTextScale, largeFactory);
         fishingLayers.setLayer(largeTextPane, JLayeredPane.MODAL_LAYER);
         fishingLayers.add(largeTextPane);
