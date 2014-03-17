@@ -848,8 +848,6 @@ public class AssaultFish {
                         if (SwingUtilities.isLeftMouseButton(e)) {
                             exiting();
                         } else {
-                            layers.remove(winPane);
-                            layers.repaint();
                             restart();
                         }
                     }
@@ -945,8 +943,6 @@ public class AssaultFish {
                         if (SwingUtilities.isLeftMouseButton(e)) {
                             exiting();
                         } else {
-                            layers.remove(winPane);
-                            layers.repaint();
                             restart();
                         }
                     }
