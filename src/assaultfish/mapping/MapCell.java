@@ -105,7 +105,7 @@ public class MapCell {
     }
 
     public boolean isBlocking() {
-        return (feature == null ? false : feature.blocking) || terrain.blocking;
+        return (feature == null ? false : feature.blocking) || terrain.blocking || (creature != null);
     }
 
 }

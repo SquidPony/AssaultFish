@@ -55,8 +55,8 @@ public class Creature extends Item {
     }
 
     /**
-     * Reduces the monster's health by the amount passed in. Returns true if this results in the
-     * health being equal to or below zero.
+     * Reduces the monster's health by the amount passed in. Returns true if
+     * this results in the health being equal to or below zero.
      *
      * @param damage
      * @return

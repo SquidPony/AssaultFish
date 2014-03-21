@@ -11,7 +11,6 @@ import assaultfish.physical.TerrainFeature;
 import assaultfish.physical.Treasure;
 import java.awt.BorderLayout;
 import java.awt.Font;
-import java.awt.FontFormatException;
 import java.awt.GraphicsEnvironment;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -19,28 +18,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import static java.awt.event.KeyEvent.VK_B;
-import static java.awt.event.KeyEvent.VK_DOWN;
-import static java.awt.event.KeyEvent.VK_H;
-import static java.awt.event.KeyEvent.VK_J;
-import static java.awt.event.KeyEvent.VK_K;
-import static java.awt.event.KeyEvent.VK_L;
-import static java.awt.event.KeyEvent.VK_LEFT;
-import static java.awt.event.KeyEvent.VK_N;
-import static java.awt.event.KeyEvent.VK_NUMPAD1;
-import static java.awt.event.KeyEvent.VK_NUMPAD2;
-import static java.awt.event.KeyEvent.VK_NUMPAD3;
-import static java.awt.event.KeyEvent.VK_NUMPAD4;
-import static java.awt.event.KeyEvent.VK_NUMPAD5;
-import static java.awt.event.KeyEvent.VK_NUMPAD6;
-import static java.awt.event.KeyEvent.VK_NUMPAD7;
-import static java.awt.event.KeyEvent.VK_NUMPAD8;
-import static java.awt.event.KeyEvent.VK_NUMPAD9;
-import static java.awt.event.KeyEvent.VK_PERIOD;
-import static java.awt.event.KeyEvent.VK_RIGHT;
-import static java.awt.event.KeyEvent.VK_U;
-import static java.awt.event.KeyEvent.VK_UP;
-import static java.awt.event.KeyEvent.VK_Y;
+import static java.awt.event.KeyEvent.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -52,8 +30,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.TreeMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 import javafx.scene.media.MediaException;
 import javax.imageio.ImageIO;
@@ -88,7 +64,7 @@ import squidpony.squidutility.graph.PointGraph;
  */
 public class AssaultFish {
 
-    private static final String version = "1.3";
+    private static final String version = "1.6";
 
     private static final double widthScale = 1.2,
             heightScale = 1.2;
@@ -532,8 +508,8 @@ public class AssaultFish {
     }
 
     /**
-     * This is the main game loop method that takes input and process the results. Right now it
-     * doesn't loop!
+     * This is the main game loop method that takes input and process the
+     * results. Right now it doesn't loop!
      */
     private void runTurn() {
         updateMap();
@@ -660,6 +636,32 @@ public class AssaultFish {
             }
         }
 
+        //hacky post-process to hide bugs
+        monsters = new ArrayList<>();
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                Creature creature = map[x][y].creature;
+                if (creature != null && creature != player) {
+                    creature.x = x;
+                    creature.y = y;
+                    monsters.add(creature);
+//                    if (!monsters.contains(creature)) {
+//                        map[x][y].creature = null;//delete it if it's not in the monster list
+//                    } else {
+//                        if ((map[x][y].feature == null ? false : map[x][y].feature.blocking) || map[x][y].terrain.blocking) {//remove invalid creature
+//                            map[x][y].creature = null;
+//                            monsters.remove(creature);
+//                        }
+//                    }
+                }
+            }
+        }
+        for (Creature creature : monsters) {
+            if (creature != map[creature.x][creature.y].creature) {
+                System.err.println("Invalid creature: " + creature.name + " at " + creature.x + ", " + creature.y + "  should be " + map[creature.x][creature.y].creature);
+            }
+        }
+
         removeFish(selectedFish);
         fishThrowingPanel.erase();
         fishThrowingPanel.refresh();
@@ -746,9 +748,12 @@ public class AssaultFish {
         c = map[x][y].creature;
         //check for creature change
         if (c != null && c != player) {
-            map[x][y].creature = new Creature(c.name, c.health, c.symbol, c.element.combine(e));
             monsters.remove(c);
-            monsters.add(map[x][y].creature);
+            c = new Creature(c.name, c.health, c.symbol, c.element.combine(e));
+            map[x][y].creature = c;
+            c.x = x;
+            c.y = y;
+            monsters.add(c);
         }
 
         //check for tree destruction
@@ -1018,10 +1023,11 @@ public class AssaultFish {
     }
 
     /**
-     * Attempts to move in the given direction. If a monster is in that direction then the player
-     * attacks the monster.
+     * Attempts to move in the given direction. If a monster is in that
+     * direction then the player attacks the monster.
      *
-     * Returns false if there was a wall in the direction and so no action was taken.
+     * Returns false if there was a wall in the direction and so no action was
+     * taken.
      *
      * @param dir
      * @return
@@ -1256,8 +1262,8 @@ public class AssaultFish {
     }
 
     /**
-     * Randomly places a group of walls in the map. This replaces whatever was in that location
-     * previously.
+     * Randomly places a group of walls in the map. This replaces whatever was
+     * in that location previously.
      */
     private void placeWallChunk(Terrain t, TerrainFeature tf) {
         int spread = 5;
@@ -1299,26 +1305,11 @@ public class AssaultFish {
         }
         line.poll();
         return line.poll();
-
-//        LinkedList<Vertex> path = graph.getDijkstraPath(from, to);
-//        if (path == null) {
-//            return to;//no waypoints between targets
-//        }
-//
-//        Point previous = path.get(0).point;
-//        for (Vertex v : path) {
-//            if (los.isReachable(sightBlocking, from.x, from.y, v.point.x, v.point.y)) {
-//                previous = v.point;
-//            } else {
-//                return previous;//go for the one furthest away that's visible
-//            }
-//        }
-//        return previous;
     }
 
     /**
-     * Moves the monster given if possible. Monsters will not move into walls, other monsters, or
-     * the player.
+     * Moves the monster given if possible. Monsters will not move into walls,
+     * other monsters, or the player.
      *
      * @param monster
      */
@@ -1925,8 +1916,8 @@ public class AssaultFish {
     /**
      * Returns the y position of the last space before the terrain bed.
      *
-     * To allow for bounds safety, this method will return 0 as the result if the bed reaches the
-     * top rather than -1.
+     * To allow for bounds safety, this method will return 0 as the result if
+     * the bed reaches the top rather than -1.
      *
      * @param x
      * @return
