@@ -43,12 +43,12 @@ import squidpony.squidcolor.SColor;
 import squidpony.squidcolor.SColorFactory;
 import squidpony.squidgrid.fov.FOVTranslator;
 import squidpony.squidgrid.fov.ShadowFOV;
-import squidpony.squidgrid.gui.awt.TextCellFactory;
-import squidpony.squidgrid.gui.swing.SwingPane;
+import squidpony.squidgrid.gui.SwingPane;
+import squidpony.squidgrid.gui.TextCellFactory;
 import squidpony.squidgrid.los.LOSSolver;
 import squidpony.squidgrid.util.BasicRadiusStrategy;
-import squidpony.squidgrid.util.Direction;
-import static squidpony.squidgrid.util.Direction.*;
+import squidpony.squidgrid.util.DirectionIntercardinal;
+import static squidpony.squidgrid.util.DirectionIntercardinal.*;
 import squidpony.squidgrid.util.RadiusStrategy;
 import squidpony.squidmath.Bresenham;
 import squidpony.squidmath.PerlinNoise;
@@ -237,28 +237,28 @@ public class AssaultFish {
 
     private void showHelp() {
         if (helpPane == null) {
-            helpPane = new SwingPane(width, height, textFactory);
+            helpPane = new SwingPane(width, height, textFactory, null);
             helpPane.erase();
             SColor fade = SColor.DARK_GRAY;
             SColor heading = SColor.RED_PIGMENT;
             SColor command = SColor.SCHOOL_BUS_YELLOW;
             SColor sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 150);
-            for (int x = 0; x < helpPane.getGridWidth(); x++) {
-                helpPane.clearCell(x, 0, sc);
-                helpPane.clearCell(x, 1, sc);
-                helpPane.clearCell(x, helpPane.getGridHeight() - 1, sc);
-                helpPane.clearCell(x, helpPane.getGridHeight() - 2, sc);
+            for (int x = 0; x < helpPane.gridWidth(); x++) {
+                helpPane.put(x, 0, sc);
+                helpPane.put(x, 1, sc);
+                helpPane.put(x, helpPane.gridHeight() - 1, sc);
+                helpPane.put(x, helpPane.gridHeight() - 2, sc);
             }
-            for (int y = 0; y < helpPane.getGridHeight(); y++) {
-                helpPane.clearCell(0, y, sc);
-                helpPane.clearCell(1, y, sc);
-                helpPane.clearCell(helpPane.getGridWidth() - 1, y, sc);
-                helpPane.clearCell(helpPane.getGridWidth() - 2, y, sc);
+            for (int y = 0; y < helpPane.gridHeight(); y++) {
+                helpPane.put(0, y, sc);
+                helpPane.put(1, y, sc);
+                helpPane.put(helpPane.gridWidth() - 1, y, sc);
+                helpPane.put(helpPane.gridWidth() - 2, y, sc);
             }
             sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 240);
-            for (int x = 2; x < helpPane.getGridWidth() - 2; x++) {
-                for (int y = 2; y < helpPane.getGridHeight() - 2; y++) {
-                    helpPane.clearCell(x, y, sc);
+            for (int x = 2; x < helpPane.gridWidth() - 2; x++) {
+                for (int y = 2; y < helpPane.gridHeight() - 2; y++) {
+                    helpPane.put(x, y, sc);
                 }
             }
 
@@ -268,199 +268,199 @@ public class AssaultFish {
             int left = 5;
 
             text = "ASSAULT FISH  v" + version;
-            x = (helpPane.getGridWidth() - text.length()) / 2;//centered
-            helpPane.placeHorizontalString(x, y, text, heading, sc);
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
+            helpPane.put(x, y, text, heading);
             y += 2;
 
             text = "Your peaceful life as a fisherman has come to an end.";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 1;
 
             text = "A horde of elementals has decended upon the land and it is your duty";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 1;
 
             text = "to fight them any way you can! And that means using the fishing skills";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 1;
 
             text = "of your forefathers to fish from the many local elemental pools and";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 1;
 
             text = "strategically throw your explosive catch at the enemy!";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 3;
 
             text = "Main Map Controls";
-            x = (helpPane.getGridWidth() - text.length()) / 2;//centered
-            helpPane.placeHorizontalString(x, y, text, heading, sc);
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
+            helpPane.put(x, y, text, heading);
             y += 2;
 
             text = "Without a fish selected for throwing:";
-            x = (helpPane.getGridWidth() - text.length()) / 2;//centered
-            helpPane.placeHorizontalString(x, y, text);
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
+            helpPane.put(x, y, text);
             y += 1;
 
             text = "Left click";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text, command, sc);
+            helpPane.put(x, y, text, command);
             x += text.length();
             text = " - move";
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 1;
 
             text = "Ctrl-Left click";
             x = left;
-            helpPane.placeHorizontalString(x, y, text, command, sc);
+            helpPane.put(x, y, text, command);
             x += text.length();
             text = " - examine";
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 1;
 
             text = "Left click on fish";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text, command, sc);
+            helpPane.put(x, y, text, command);
             x += text.length();
             text = " - select fish";
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 3;
 
             text = "With a fish selected for throwing:";
-            x = (helpPane.getGridWidth() - text.length()) / 2;//centered
-            helpPane.placeHorizontalString(x, y, text);
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
+            helpPane.put(x, y, text);
             y += 1;
 
             text = "Left click";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text, command, sc);
+            helpPane.put(x, y, text, command);
             x += text.length();
             text = " - throw fish";
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 1;
 
             text = "Right click";
             x = left;
-            helpPane.placeHorizontalString(x, y, text, command, sc);
+            helpPane.put(x, y, text, command);
             x += text.length();
             text = " - deselect fish";
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 1;
 
             text = "Left click on fish";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text, command, sc);
+            helpPane.put(x, y, text, command);
             x += text.length();
             text = " - select a new fish";
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 1;
 
             text = "Left click on the slected fish";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text, command, sc);
+            helpPane.put(x, y, text, command);
             x += text.length();
             text = " - deselect fish";
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 3;
 
             text = "Fishing Controls";
-            x = (helpPane.getGridWidth() - text.length()) / 2;//centered
-            helpPane.placeHorizontalString(x, y, text, heading, sc);
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
+            helpPane.put(x, y, text, heading);
             y += 1;
 
             text = "Left click";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text, command, sc);
+            helpPane.put(x, y, text, command);
             x += text.length();
             text = " - start casting meter / cast";
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 1;
 
             text = "Right click";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text, command, sc);
+            helpPane.put(x, y, text, command);
             x += text.length();
             text = " - stop fishing";
-            helpPane.placeHorizontalString(x, y, text);
+            helpPane.put(x, y, text);
             y += 3;
 
             text = "Elemental enemies are destroyed by";
-            x = (helpPane.getGridWidth() - text.length()) / 2;//centered
-            helpPane.placeHorizontalString(x, y, text, heading, sc);
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
+            helpPane.put(x, y, text, heading);
             y += 1;
 
             text = "Acid";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text, Element.ACID.color, sc);
+            helpPane.put(x, y, text, Element.ACID.color);
             x += text.length();
             text = " - Sand";
-            helpPane.placeHorizontalString(x, y, text, Element.SAND.color, sc);
+            helpPane.put(x, y, text, Element.SAND.color);
             y += 1;
 
             text = "Air";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text, Element.AIR.color, sc);
+            helpPane.put(x, y, text, Element.AIR.color);
             x += text.length();
             text = " - Mana";
-            helpPane.placeHorizontalString(x, y, text, Element.MANA.color, sc);
+            helpPane.put(x, y, text, Element.MANA.color);
             y += 1;
 
             text = "Blood";
             x = left;//left justified
-            helpPane.placeHorizontalString(x, y, text, Element.BLOOD.color, sc);
+            helpPane.put(x, y, text, Element.BLOOD.color);
             x += text.length();
             text = " - Tar";
-            helpPane.placeHorizontalString(x, y, text, Element.TAR.color, sc);
+            helpPane.put(x, y, text, Element.TAR.color);
             y -= 2;
 
             text = "Magma";
             x = left + 20;
-            helpPane.placeHorizontalString(x, y, text, Element.MAGMA.color, sc);
+            helpPane.put(x, y, text, Element.MAGMA.color);
             x += text.length();
             text = " - Water";
-            helpPane.placeHorizontalString(x, y, text, Element.WATER.color, sc);
+            helpPane.put(x, y, text, Element.WATER.color);
             y += 1;
 
             text = "Mana";
             x = left + 20;
-            helpPane.placeHorizontalString(x, y, text, Element.MANA.color, sc);
+            helpPane.put(x, y, text, Element.MANA.color);
             x += text.length();
             text = " - Blood";
-            helpPane.placeHorizontalString(x, y, text, Element.BLOOD.color, sc);
+            helpPane.put(x, y, text, Element.BLOOD.color);
             y += 1;
 
             text = "Sand";
             x = left + 20;
-            helpPane.placeHorizontalString(x, y, text, Element.SAND.color, sc);
+            helpPane.put(x, y, text, Element.SAND.color);
             x += text.length();
             text = " - Acid";
-            helpPane.placeHorizontalString(x, y, text, Element.ACID.color, sc);
+            helpPane.put(x, y, text, Element.ACID.color);
             y -= 2;
 
             text = "Tar";
             x = left + 40;
-            helpPane.placeHorizontalString(x, y, text, Element.TAR.color, sc);
+            helpPane.put(x, y, text, Element.TAR.color);
             x += text.length();
             text = " - Magma";
-            helpPane.placeHorizontalString(x, y, text, Element.MAGMA.color, sc);
+            helpPane.put(x, y, text, Element.MAGMA.color);
             y += 1;
 
             text = "Water";
             x = left + 40;
-            helpPane.placeHorizontalString(x, y, text, Element.WATER.color, sc);
+            helpPane.put(x, y, text, Element.WATER.color);
             x += text.length();
             text = " - Air";
-            helpPane.placeHorizontalString(x, y, text, Element.AIR.color, sc);
+            helpPane.put(x, y, text, Element.AIR.color);
 
             text = "--  press mouse button to continue --";
-            x = (helpPane.getGridWidth() - text.length()) / 2;//centered
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
             y = height - 3;
-            helpPane.placeHorizontalString(x, y, text, heading, sc);
+            helpPane.put(x, y, text, heading);
 
             helpPane.refresh();
             layers.setLayer(helpPane, JLayeredPane.DRAG_LAYER);
@@ -508,8 +508,7 @@ public class AssaultFish {
     }
 
     /**
-     * This is the main game loop method that takes input and process the
-     * results. Right now it doesn't loop!
+     * This is the main game loop method that takes input and process the results. Right now it doesn't loop!
      */
     private void runTurn() {
         updateMap();
@@ -541,7 +540,7 @@ public class AssaultFish {
 //
 //            @Override
 //            public void run() {
-        boolean success = tryToMove(Direction.getDirection(x - player.x, y - player.y));
+        boolean success = tryToMove(DirectionIntercardinal.getDirection(x - player.x, y - player.y));
         if (success) {
             runTurn();
         }
@@ -598,7 +597,7 @@ public class AssaultFish {
             targetX = p.x;
             targetY = p.y;
             fishThrowingPanel.erase();
-            fishThrowingPanel.placeCharacter(targetX, targetY, selectedFish.symbol.charAt(0), selectedFish.color);
+            fishThrowingPanel.put(targetX, targetY, selectedFish.symbol.charAt(0), selectedFish.color);
             fishThrowingPanel.refresh();
             try {
                 Thread.sleep(50);
@@ -620,9 +619,9 @@ public class AssaultFish {
                         if (x >= 0 && x < width && y >= 0 && y < height) {
                             if (!modified[x][y]) {
                                 reactToElementChange(x, y, selectedFish.element);
-                                fishThrowingPanel.placeCharacter(x, y, '*', selectedFish.color);
+                                fishThrowingPanel.put(x, y, '*', selectedFish.color);
                                 modified[x][y] = true;
-                                mapPanel.placeCharacter(x, y, map[x][y].getSymbol().charAt(0), map[x][y].foregroundColor(), map[x][y].backgroundColor());
+                                mapPanel.put(x, y, map[x][y].getSymbol().charAt(0), map[x][y].foregroundColor());//, map[x][y].backgroundColor());
                             }
                         }
                     }
@@ -813,28 +812,28 @@ public class AssaultFish {
     private void win() {
         canClick = false;
         if (winPane == null) {
-            winPane = new SwingPane(width, height, textFactory);
+            winPane = new SwingPane(width, height, textFactory, null);
             winPane.erase();
             SColor fade = SColor.DARK_GRAY;
             SColor heading = SColor.RED_PIGMENT;
             SColor command = SColor.SCHOOL_BUS_YELLOW;
             SColor sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 150);
-            for (int x = 0; x < winPane.getGridWidth(); x++) {
-                winPane.clearCell(x, 0, sc);
-                winPane.clearCell(x, 1, sc);
-                winPane.clearCell(x, winPane.getGridHeight() - 1, sc);
-                winPane.clearCell(x, winPane.getGridHeight() - 2, sc);
+            for (int x = 0; x < winPane.gridWidth(); x++) {
+                winPane.put(x, 0, sc);
+                winPane.put(x, 1, sc);
+                winPane.put(x, winPane.gridHeight() - 1, sc);
+                winPane.put(x, winPane.gridHeight() - 2, sc);
             }
-            for (int y = 0; y < winPane.getGridHeight(); y++) {
-                winPane.clearCell(0, y, sc);
-                winPane.clearCell(1, y, sc);
-                winPane.clearCell(winPane.getGridWidth() - 1, y, sc);
-                winPane.clearCell(winPane.getGridWidth() - 2, y, sc);
+            for (int y = 0; y < winPane.gridHeight(); y++) {
+                winPane.put(0, y, sc);
+                winPane.put(1, y, sc);
+                winPane.put(winPane.gridWidth() - 1, y, sc);
+                winPane.put(winPane.gridWidth() - 2, y, sc);
             }
             sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 240);
-            for (int x = 2; x < winPane.getGridWidth() - 2; x++) {
-                for (int y = 2; y < winPane.getGridHeight() - 2; y++) {
-                    winPane.clearCell(x, y, sc);
+            for (int x = 2; x < winPane.gridWidth() - 2; x++) {
+                for (int y = 2; y < winPane.gridHeight() - 2; y++) {
+                    winPane.put(x, y, sc);
                 }
             }
 
@@ -844,39 +843,39 @@ public class AssaultFish {
             int left = 5;
 
             text = "--  press right mouse to restart or left mouse to quit --";
-            x = (diePane.getGridWidth() - text.length()) / 2;//centered
-            diePane.placeHorizontalString(x, y, text, SColor.ELECTRIC_GREEN, sc);
+            x = (diePane.gridWidth() - text.length()) / 2;//centered
+            diePane.put(x, y, text, SColor.ELECTRIC_GREEN);
             y += 2;
 
             text = "Your peaceful life as a fisherman has come to an end.";
             x = left;//left justified
-            winPane.placeHorizontalString(x, y, text);
+            winPane.put(x, y, text);
             y += 1;
             text = "Because you destroyed the elemental menace.";
             x = left;//left justified
-            winPane.placeHorizontalString(x, y, text);
+            winPane.put(x, y, text);
             y += 2;
             text = "Your fame and prowess are now legendary across the land! Your";
             x = left;//left justified
-            winPane.placeHorizontalString(x, y, text);
+            winPane.put(x, y, text);
             y += 1;
             text = "nights are filled with the shouts and laughter of all your";
             x = left;//left justified
-            winPane.placeHorizontalString(x, y, text);
+            winPane.put(x, y, text);
             y += 1;
             text = "friends and family.";
             x = left;//left justified
-            winPane.placeHorizontalString(x, y, text);
+            winPane.put(x, y, text);
             y += 2;
             text = "You live happily ever after.";
             x = left;//left justified
-            winPane.placeHorizontalString(x, y, text);
+            winPane.put(x, y, text);
             y += 1;
 
             text = "--  press right mouse to restart or left mouse to quit --";
-            x = (winPane.getGridWidth() - text.length()) / 2;//centered
+            x = (winPane.gridWidth() - text.length()) / 2;//centered
             y = height - 3;
-            winPane.placeHorizontalString(x, y, text, SColor.ELECTRIC_GREEN, sc);
+            winPane.put(x, y, text, SColor.ELECTRIC_GREEN);
 
             winPane.refresh();
             layers.setLayer(winPane, JLayeredPane.DRAG_LAYER);
@@ -903,28 +902,28 @@ public class AssaultFish {
     private void die(String reason) {
         canClick = false;
         if (diePane == null) {
-            diePane = new SwingPane(width, height, textFactory);
+            diePane = new SwingPane(width, height, textFactory, null);
             diePane.erase();
             SColor fade = SColor.DARK_GRAY;
             SColor heading = SColor.RED_PIGMENT;
             SColor command = SColor.SCHOOL_BUS_YELLOW;
             SColor sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 150);
-            for (int x = 0; x < diePane.getGridWidth(); x++) {
-                diePane.clearCell(x, 0, sc);
-                diePane.clearCell(x, 1, sc);
-                diePane.clearCell(x, diePane.getGridHeight() - 1, sc);
-                diePane.clearCell(x, diePane.getGridHeight() - 2, sc);
+            for (int x = 0; x < diePane.gridWidth(); x++) {
+                diePane.put(x, 0, sc);
+                diePane.put(x, 1, sc);
+                diePane.put(x, diePane.gridHeight() - 1, sc);
+                diePane.put(x, diePane.gridHeight() - 2, sc);
             }
-            for (int y = 0; y < diePane.getGridHeight(); y++) {
-                diePane.clearCell(0, y, sc);
-                diePane.clearCell(1, y, sc);
-                diePane.clearCell(diePane.getGridWidth() - 1, y, sc);
-                diePane.clearCell(diePane.getGridWidth() - 2, y, sc);
+            for (int y = 0; y < diePane.gridHeight(); y++) {
+                diePane.put(0, y, sc);
+                diePane.put(1, y, sc);
+                diePane.put(diePane.gridWidth() - 1, y, sc);
+                diePane.put(diePane.gridWidth() - 2, y, sc);
             }
             sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 240);
-            for (int x = 2; x < diePane.getGridWidth() - 2; x++) {
-                for (int y = 2; y < diePane.getGridHeight() - 2; y++) {
-                    diePane.clearCell(x, y, sc);
+            for (int x = 2; x < diePane.gridWidth() - 2; x++) {
+                for (int y = 2; y < diePane.gridHeight() - 2; y++) {
+                    diePane.put(x, y, sc);
                 }
             }
 
@@ -934,44 +933,44 @@ public class AssaultFish {
             int left = 5;
 
             text = "--  press right mouse to restart or left mouse to quit --";
-            x = (diePane.getGridWidth() - text.length()) / 2;//centered
-            diePane.placeHorizontalString(x, y, text, SColor.ELECTRIC_GREEN, sc);
+            x = (diePane.gridWidth() - text.length()) / 2;//centered
+            diePane.put(x, y, text, SColor.ELECTRIC_GREEN);
             y += 2;
 
             text = "Your peaceful life as a fisherman has come to an end.";
             x = left;//left justified
-            diePane.placeHorizontalString(x, y, text);
+            diePane.put(x, y, text);
             y += 1;
             text = "Because you died.";
             x = left;//left justified
-            diePane.placeHorizontalString(x, y, text);
+            diePane.put(x, y, text);
             y += 2;
             text = "It's lucky for you though, now you don't have to hear the";
             x = left;//left justified
-            diePane.placeHorizontalString(x, y, text);
+            diePane.put(x, y, text);
             y += 1;
             text = "screams of your friends and loved ones as they are torn apart";
             x = left;//left justified
-            diePane.placeHorizontalString(x, y, text);
+            diePane.put(x, y, text);
             y += 1;
             text = "by vicious elemental beings.";
             x = left;//left justified
-            diePane.placeHorizontalString(x, y, text);
+            diePane.put(x, y, text);
             y += 3;
 
             text = "You died because:";
             x = left;//left justified
-            diePane.placeHorizontalString(x, y, text, SColor.SAFETY_ORANGE, sc);
+            diePane.put(x, y, text, SColor.SAFETY_ORANGE);
             y += 1;
             text = reason;
             x = left;//left justified
-            diePane.placeHorizontalString(x, y, text);
+            diePane.put(x, y, text);
             y += 1;
 
             text = "--  press right mouse to restart or left mouse to quit --";
-            x = (diePane.getGridWidth() - text.length()) / 2;//centered
+            x = (diePane.gridWidth() - text.length()) / 2;//centered
             y = height - 3;
-            diePane.placeHorizontalString(x, y, text, SColor.ELECTRIC_GREEN, sc);
+            diePane.put(x, y, text, SColor.ELECTRIC_GREEN);
 
             diePane.refresh();
             layers.setLayer(diePane, JLayeredPane.DRAG_LAYER);
@@ -1023,16 +1022,14 @@ public class AssaultFish {
     }
 
     /**
-     * Attempts to move in the given direction. If a monster is in that
-     * direction then the player attacks the monster.
+     * Attempts to move in the given direction. If a monster is in that direction then the player attacks the monster.
      *
-     * Returns false if there was a wall in the direction and so no action was
-     * taken.
+     * Returns false if there was a wall in the direction and so no action was taken.
      *
      * @param dir
      * @return
      */
-    private boolean tryToMove(Direction dir) {
+    private boolean tryToMove(DirectionIntercardinal dir) {
         MapCell tile = map[player.x + dir.deltaX][player.y + dir.deltaY];
         if (tile.isBlocking()) {
             if (tile.terrain.lake) {
@@ -1068,29 +1065,29 @@ public class AssaultFish {
             for (int y = 0; y < height; y++) {
                 map[x][y].light = SColor.WHITE;
 //                map[x][y].seen = true;
-                mapPanel.placeCharacter(x, y, map[x][y].getSymbol().charAt(0), map[x][y].foregroundColor(), map[x][y].backgroundColor());
+                mapPanel.put(x, y, map[x][y].getSymbol().charAt(0), map[x][y].foregroundColor());//, map[x][y].backgroundColor());
             }
         }
 
-        mapPanel.placeCharacter(player.x, player.y, player.symbol.charAt(0));
+        mapPanel.put(player.x, player.y, player.symbol.charAt(0));
         mapPanel.refresh();
     }
 
     private void updateFishInventoryPanel() {
         int x = 1;//start off with a bit of padding
-        fishInventoryPanel.removeHighlight();
+//        fishInventoryPanel.removeHighlight();
         for (Element e : Element.values()) {
             int y = 1;
             for (Size s : Size.values()) {
                 if (selectedFish != null && selectedFish.element == e && selectedFish.size == s) {
-                    fishInventoryPanel.highlight(x, y, x + maxFish - 1, y);
+//                    fishInventoryPanel.highlight(x, y, x + maxFish - 1, y);
                 }
                 int n = fishInventory.get(e).get(s);
                 for (int i = 0; i < maxFish; i++) {
                     if (i < n) {
-                        fishInventoryPanel.placeCharacter(x + i, y, Fish.symbol(s).charAt(0), e.color);
+                        fishInventoryPanel.put(x + i, y, Fish.symbol(s).charAt(0), e.color);
                     } else {
-                        fishInventoryPanel.clearCell(x + i, y);
+                        fishInventoryPanel.clear(x + i, y);
                     }
                 }
                 y++;
@@ -1100,9 +1097,9 @@ public class AssaultFish {
 
         for (x = 0; x < maxHealth; x++) {
             if (x < player.health) {
-                fishInventoryPanel.placeCharacter(x + healthX, 2, bobber, SColor.BLOOD);
+                fishInventoryPanel.put(x + healthX, 2, bobber, SColor.BLOOD);
             } else {
-                fishInventoryPanel.clearCell(x + healthX, 2);
+                fishInventoryPanel.clear(x + healthX, 2);
             }
         }
 
@@ -1134,7 +1131,7 @@ public class AssaultFish {
             for (int x = overlayLocation.x - radius; x <= overlayLocation.x + radius; x++) {
                 for (int y = overlayLocation.y - radius; y <= overlayLocation.y + radius; y++) {
                     if (strat.radius(overlayLocation.x, overlayLocation.y, x, y) <= radius + 0.1) {
-                        overlayPanel.clearCell(x, y, new SColor(c.getRed(), c.getGreen(), c.getBlue(), overlayAlpha));
+                        overlayPanel.put(x, y, new SColor(c.getRed(), c.getGreen(), c.getBlue(), overlayAlpha));
                     }
                 }
             }
@@ -1153,7 +1150,7 @@ public class AssaultFish {
         outputPanel.erase();
         outputPanel.setVisible(true);
 
-        outputPanel.placeHorizontalString(outputPanel.getGridWidth() - message.length() - 1, 1, message);
+        outputPanel.put(outputPanel.gridWidth() - message.length() - 1, 1, message);
         outputPanel.refresh();
 
         final long startTime = System.currentTimeMillis();
@@ -1262,8 +1259,7 @@ public class AssaultFish {
     }
 
     /**
-     * Randomly places a group of walls in the map. This replaces whatever was
-     * in that location previously.
+     * Randomly places a group of walls in the map. This replaces whatever was in that location previously.
      */
     private void placeWallChunk(Terrain t, TerrainFeature tf) {
         int spread = 5;
@@ -1308,24 +1304,23 @@ public class AssaultFish {
     }
 
     /**
-     * Moves the monster given if possible. Monsters will not move into walls,
-     * other monsters, or the player.
+     * Moves the monster given if possible. Monsters will not move into walls, other monsters, or the player.
      *
      * @param monster
      */
     private void moveMonster(Creature monster) {
 //        Direction dir = Direction.CARDINALS[rng.nextInt(Direction.CARDINALS.length)];//get a random direction
         Point p = getClosestWaypoint(new Point(monster.x, monster.y), new Point(player.x, player.y));
-        Direction dir;
-        dir = SCollections.getRandomElement(Arrays.asList(Direction.values()));
+        DirectionIntercardinal dir;
+        dir = SCollections.getRandomElement(Arrays.asList(DirectionIntercardinal.values()));
         if (p != null) {
-            dir = Direction.getDirection(p.x - monster.x, p.y - monster.y);
+            dir = DirectionIntercardinal.getDirection(p.x - monster.x, p.y - monster.y);
             if (map[p.x][p.y].isBlocking()) {
-                dir = SCollections.getRandomElement(Arrays.asList(Direction.values()));
+                dir = SCollections.getRandomElement(Arrays.asList(DirectionIntercardinal.values()));
             }
         }
-        while (dir == Direction.NONE) {
-            dir = SCollections.getRandomElement(Arrays.asList(Direction.values()));
+        while (dir == DirectionIntercardinal.NONE) {
+            dir = SCollections.getRandomElement(Arrays.asList(DirectionIntercardinal.values()));
         }
 //        Direction dir = Direction.getDirection(player.x - monster.x, player.y - monster.y);
         if (monster.x + dir.deltaX < 0 || monster.x + dir.deltaX >= width || monster.y + dir.deltaY < 0 || monster.y + dir.deltaY >= height) {
@@ -1343,7 +1338,7 @@ public class AssaultFish {
         }
 
         if (nowFishing) {
-            for (Direction d : Direction.CARDINALS) {
+            for (DirectionIntercardinal d : DirectionIntercardinal.CARDINALS) {
                 if (d.deltaX + monster.x >= 0 & d.deltaX + monster.x < width && d.deltaY + monster.y >= 0 && d.deltaY + monster.y < height) {
                     if (d.deltaX + monster.x == player.x && d.deltaY + monster.y == player.y) {
                         printOut("A monster is next to you!   Right-click to stop fishing.");
@@ -1392,7 +1387,7 @@ public class AssaultFish {
         } catch (IOException ex) {
             //don't do anything if it failed, the default Java icon will be used
         }
-        frame.setBackground(SColor.BLACK);
+        frame.getContentPane().setBackground(SColor.BLACK);
         frame.setUndecorated(true);
 
         layers = new JLayeredPane();
@@ -1409,66 +1404,61 @@ public class AssaultFish {
         int bufferHorizontal = 0;
         int bufferVertical = 0;
 
-        mapPanel = new SwingPane(width, height, font);
-        mapPanel.setDefaultBackground(SColor.BLACK);
-        while (mapPanel.getCellWidth() * (mapPanel.getGridWidth()) >= screenWidth + bufferHorizontal
-                || mapPanel.getCellHeight() * (mapPanel.getGridHeight() + 6) >= screenHeight + bufferVertical) {
-            mapPanel = new SwingPane(width, height, font);
-            mapPanel.setDefaultBackground(SColor.BLACK);
-            font = new Font(font.getName(), font.getStyle(), font.getSize() - 1);
-        }
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                mapPanel.clearCell(x, y);
-            }
-        }
-        mapPanel.setDefaultForeground(SColor.CREAM);
-
-        textFactory = mapPanel.getTextCellFactory();
-        textFactory.setAntialias(true);
+        String fitting = "";
         for (Size s : Size.values()) {
-            textFactory.addFit(Fish.symbol(s));
+            fitting += Fish.symbol(s);
         }
+        textFactory = new TextCellFactory(font, 18, 24, true, 0, fitting + TextCellFactory.DEFAULT_FITTING);
+        mapPanel = new SwingPane(width, height, textFactory, null);
 
-        textFactory.initializeBySize(mapPanel.getCellWidth(), mapPanel.getCellHeight(), font);
-//        mapPanel.placeHorizontalString(width / 2 - 4, height / 2, "Loading");
+        //Size down until it fits on the screan
+//        while (mapPanel.cellWidth() * (mapPanel.gridWidth()) >= screenWidth + bufferHorizontal
+//                || mapPanel.cellHeight() * (mapPanel.gridHeight() + 6) >= screenHeight + bufferVertical) {
+//            font = new Font(font.getName(), font.getStyle(), font.getSize() - 1);
+//        textFactory = new TextCellFactory(font, width, height, true, 0, fitting + TextCellFactory.DEFAULT_FITTING);
+//            mapPanel = new SwingPane(width, height, textFactory, null);
+//        }
+//        for (int x = 0; x < width; x++) {
+//            for (int y = 0; y < height; y++) {
+//                mapPanel.clear(x, y);
+//            }
+//        }
+        mapPanel.setDefaultForeground(SColor.CREAM);
         mapPanel.refresh();
         layers.setPreferredSize(mapPanel.getPreferredSize());
         layers.setLayer(mapPanel, JLayeredPane.DEFAULT_LAYER);
         layers.add(mapPanel);
 
-        overlayPanel = new SwingPane(mapPanel.getGridWidth(), mapPanel.getGridHeight(), textFactory);
+        overlayPanel = new SwingPane(mapPanel.gridWidth(), mapPanel.gridHeight(), textFactory, null);
         overlayPanel.refresh();
         layers.setLayer(overlayPanel, JLayeredPane.PALETTE_LAYER);
         layers.add(overlayPanel);
 
-        outputPanel = new SwingPane(mapPanel.getGridWidth(), mapPanel.getGridHeight(), textFactory);
-        outputPanel.setDefaultBackground(SColor.BLACK_KITE);
+        outputPanel = new SwingPane(mapPanel.gridWidth(), mapPanel.gridHeight(), textFactory, null);
+//        outputPanel.setDefaultBackground(SColor.BLACK_KITE);
         outputPanel.setDefaultForeground(SColor.TEA_GREEN);
         outputPanel.refresh();
         layers.setLayer(outputPanel, JLayeredPane.POPUP_LAYER);
         layers.add(outputPanel);
 
-        fishThrowingPanel = new SwingPane(mapPanel.getGridWidth(), mapPanel.getGridHeight(), textFactory);
-        fishThrowingPanel.setDefaultBackground(SColor.TRANSPARENT);
+        fishThrowingPanel = new SwingPane(mapPanel.gridWidth(), mapPanel.gridHeight(), textFactory, null);
+//        fishThrowingPanel.setDefaultBackground(SColor.TRANSPARENT);
         fishThrowingPanel.setDefaultForeground(SColor.LOQUAT_BROWN);
         fishThrowingPanel.refresh();
         layers.setLayer(fishThrowingPanel, JLayeredPane.POPUP_LAYER);
         layers.add(fishThrowingPanel);
 
-        fishText = new TextCellFactory(textFactory);
-        fishText.setPadding(0, 0, 0, 1);
-        fishText.initializeBySize(mapPanel.getCellWidth(), mapPanel.getCellHeight(), font);
-        fishInventoryPanel = new SwingPane(mapPanel.getGridWidth(), 6, fishText);
-        fishInventoryPanel.setDefaultBackground(SColor.BLACK);
+        fishText = new TextCellFactory(font, mapPanel.cellWidth(), mapPanel.cellHeight(), true, 1, 0, 0, 0, fitting);
+        fishInventoryPanel = new SwingPane(mapPanel.gridWidth(), 6, fishText, null);
+//        fishInventoryPanel.setDefaultBackground(SColor.BLACK);
         frame.add(fishInventoryPanel, BorderLayout.SOUTH);
 
         frame.pack();
 
-        fishInventoryPanel.addMouseListener(new MenuMouse(fishInventoryPanel.getCellWidth(), fishInventoryPanel.getCellHeight()));
-        mapMouse = new MapMouse(mapPanel.getCellWidth(), mapPanel.getCellHeight());
+        fishInventoryPanel.addMouseListener(new MenuMouse(fishInventoryPanel.cellWidth(), fishInventoryPanel.cellHeight()));
+        mapMouse = new MapMouse(mapPanel.cellWidth(), mapPanel.cellHeight());
         mapKeys = new MapKeys();
-        inventoryMouse = new FishInventoryMouse(fishInventoryPanel.getCellWidth(), fishInventoryPanel.getCellHeight());
+        inventoryMouse = new FishInventoryMouse(fishInventoryPanel.cellWidth(), fishInventoryPanel.cellHeight());
 
         //add invisibly the fishing panels
         fishMouse = new FishMouse();
@@ -1495,23 +1485,23 @@ public class AssaultFish {
 
     private void initializeFishInventory() {
         SwingPane p = fishInventoryPanel;
-        for (int x = 0; x < p.getGridWidth(); x++) {
-            for (int y = 0; y < p.getGridHeight(); y++) {
-                p.clearCell(x, y);
+        for (int x = 0; x < p.gridWidth(); x++) {
+            for (int y = 0; y < p.gridHeight(); y++) {
+                p.clear(x, y);
             }
         }
 
         int x = 1;//start off with a bit of padding
         for (Element e : Element.values()) {
-            p.placeHorizontalString(x, 0, e.name, e.color, SColor.BLACK);
+            p.put(x, 0, e.name, e.color);//, SColor.BLACK);
             x += maxFish + 1;
         }
 
-        p.placeHorizontalString(healthX, 1, "Health", SColor.BLOOD, p.getBackground());
+        p.put(healthX, 1, "Health", SColor.BLOOD);//, p.getBackground());
 
-        p.placeHorizontalString(helpIconLocation.x, helpIconLocation.y, "HELP", SColor.CREAM, p.getBackground());
-        p.placeHorizontalString(muteIconLocation.x, muteIconLocation.y, "MUTE", SColor.SAFETY_ORANGE, p.getBackground());
-        p.placeHorizontalString(exitIconLocation.x, exitIconLocation.y, "EXIT", SColor.BRILLIANT_ROSE, p.getBackground());
+        p.put(helpIconLocation.x, helpIconLocation.y, "HELP", SColor.CREAM);//, p.getBackground());
+        p.put(muteIconLocation.x, muteIconLocation.y, "MUTE", SColor.SAFETY_ORANGE);//, p.getBackground());
+        p.put(exitIconLocation.x, exitIconLocation.y, "EXIT", SColor.BRILLIANT_ROSE);//, p.getBackground());
         //TODO -- add text for menu once menu is available
 
         updateFishInventoryPanel();
@@ -1722,7 +1712,7 @@ public class AssaultFish {
         public void keyPressed(KeyEvent e) {
             if (canClick) {
                 canClick = false;
-                Direction d = getDirectionFromKey(e.getExtendedKeyCode());
+                DirectionIntercardinal d = getDirectionFromKey(e.getExtendedKeyCode());
                 if (d != null) {
                     workClick(d.deltaX + player.x, d.deltaY + player.y);
                 }
@@ -1732,7 +1722,7 @@ public class AssaultFish {
 
     }
 
-    private Direction getDirectionFromKey(int code) {
+    private DirectionIntercardinal getDirectionFromKey(int code) {
         switch (code) {
             case VK_LEFT:
             case VK_NUMPAD4:
@@ -1780,30 +1770,30 @@ public class AssaultFish {
         fishingMasterPanel.setLayout(new BorderLayout());
         fishingMasterPanel.add(fishingLayers, BorderLayout.NORTH);
 
-        TextCellFactory fishingFactory = new TextCellFactory(textFactory);
+        String fitting = "";
 
-        fishingFactory.initializeBySize((int) (mapPanel.getCellWidth() / widthScale), (int) (mapPanel.getCellHeight() / heightScale), new Font(font.getFontName(), Font.BOLD, font.getSize() + 2));//a little extra size in case the switch away from bold matters
-        fishingViewPanel = new SwingPane(fishWidth, fishHeight, fishingFactory);
+        for (Size s : Size.values()) {
+            fitting += Fish.symbol(s);
+        }
+        fitting += TextCellFactory.DEFAULT_FITTING;
+        TextCellFactory fishingFactory = new TextCellFactory(font, (int) (textFactory.width() / widthScale), (int) (textFactory.height() / heightScale), true, 0, fitting);
+        fishingViewPanel = new SwingPane(fishWidth, fishHeight, fishingFactory, null);
         fishingLayers.setLayer(fishingViewPanel, JLayeredPane.DEFAULT_LAYER);
         fishingLayers.add(fishingViewPanel);
 
-        fishPane = new SwingPane(fishWidth, fishHeight, fishingFactory);
+        fishPane = new SwingPane(fishWidth, fishHeight, fishingFactory, null);
         fishingLayers.setLayer(fishPane, JLayeredPane.PALETTE_LAYER);//set just above the regular map layer
         fishingLayers.add(fishPane);
 
-        TextCellFactory largeFactory = new TextCellFactory();
-        largeFactory.setAntialias(true);
-        largeFactory.setFitCharacters("@");
-        largeFactory.initializeBySize(fishingViewPanel.getCellWidth() * largeTextScale, fishingViewPanel.getCellHeight() * largeTextScale, new Font(font.getFontName(), Font.BOLD, 40));
-        largeTextPane = new SwingPane(fishWidth / largeTextScale, fishHeight / largeTextScale, largeFactory);
+        TextCellFactory largeFactory = new TextCellFactory(new Font(font.getFontName(), Font.BOLD, 40), fishingViewPanel.cellWidth() * largeTextScale, fishingViewPanel.cellHeight() * largeTextScale, true, 0, "@");
+        largeTextPane = new SwingPane(fishWidth / largeTextScale, fishHeight / largeTextScale, largeFactory, null);
         fishingLayers.setLayer(largeTextPane, JLayeredPane.MODAL_LAYER);
         fishingLayers.add(largeTextPane);
 
         fishingLayers.setPreferredSize(fishingViewPanel.getPreferredSize());
         fishingLayers.setSize(fishingViewPanel.getSize());
 
-        meterPanel = new SwingPane(width, 3, textFactory);
-        meterPanel.setDefaultBackground(SColor.BLACK);
+        meterPanel = new SwingPane(width, 3, textFactory, null);
         initMeter();
         fishingMasterPanel.add(meterPanel, BorderLayout.SOUTH);
 
@@ -1812,7 +1802,7 @@ public class AssaultFish {
     }
 
     private void dropHook() {
-        fishingViewPanel.placeCharacter(bobberLocation.x, bobberLocation.y + 1, hook, hookColor);
+        fishingViewPanel.put(bobberLocation.x, bobberLocation.y + 1, hook, hookColor);
         fishingViewPanel.refresh();
         int x = bobberLocation.x;
         int y;
@@ -1821,8 +1811,8 @@ public class AssaultFish {
                 Thread.sleep(10);
             } catch (InterruptedException ex) {
             }
-            fishingViewPanel.placeCharacter(x, y - 1, line(UP), lineColor);
-            fishingViewPanel.placeCharacter(x, y, hook, hookColor);
+            fishingViewPanel.put(x, y - 1, line(UP), lineColor);
+            fishingViewPanel.put(x, y, hook, hookColor);
             fishingViewPanel.refresh();
         }
 
@@ -1833,17 +1823,17 @@ public class AssaultFish {
 
         Fish fish = null;
         do {
-            fishingViewPanel.clearCell(x, y);
+            fishingViewPanel.clear(x, y);
 
             y--;
-            fishingViewPanel.placeCharacter(x, y, hook, hookColor);
+            fishingViewPanel.put(x, y, hook, hookColor);
             if (fish != null) {
-                fishingViewPanel.placeCharacter(x, y, fish.symbol.charAt(0), fish.color);
+                fishingViewPanel.put(x, y, fish.symbol.charAt(0), fish.color);
             } else if (fishMap[x][y] != null) {
                 fish = fishMap[x][y];
                 fishes.remove(fish);
                 fishMap[x][y] = null;
-                fishPane.clearCell(x, y);
+                fishPane.clear(x, y);
                 fishPane.refresh();
             }
             fishingViewPanel.refresh();
@@ -1881,34 +1871,34 @@ public class AssaultFish {
             bobberX = solver.x(solverTime);
             bobberY = solver.y(solverTime);
             if (lastX != bobberX) {
-                fishingViewPanel.placeCharacter(lastX, lastY, line(getDirection(bobberX - lastX, bobberY - lastY)), lineColor);
-                fishingViewPanel.placeCharacter(bobberX, bobberY, bobber, bobberColor);
+                fishingViewPanel.put(lastX, lastY, line(getDirection(bobberX - lastX, bobberY - lastY)), lineColor);
+                fishingViewPanel.put(bobberX, bobberY, bobber, bobberColor);
                 fishingViewPanel.refresh();
                 lastX = bobberX;
                 lastY = bobberY;
                 goingDown = false;
             } else if (Math.abs(bobberY - lastY) > 1 || (goingDown && bobberY != lastY)) {
-                fishingViewPanel.placeCharacter(lastX, lastY, line(getDirection(bobberX - lastX, bobberY - lastY)), lineColor);
-                fishingViewPanel.placeCharacter(bobberX, bobberY, bobber, bobberColor);
+                fishingViewPanel.put(lastX, lastY, line(getDirection(bobberX - lastX, bobberY - lastY)), lineColor);
+                fishingViewPanel.put(bobberX, bobberY, bobber, bobberColor);
                 fishingViewPanel.refresh();
                 lastX = bobberX;
                 lastY = bobberY;
                 goingDown = true;
             } else if (bobberY != lastY) {
-                fishingViewPanel.clearCell(lastX, lastY);
+                fishingViewPanel.clear(lastX, lastY);
                 goingDown = false;
             }
 
             Thread.yield();
         }
 
-        fishingViewPanel.placeCharacter(bobberX, bobberY, line(getDirection(bobberX - lastX, bobberY - lastY)), lineColor);
-        fishingViewPanel.placeCharacter(bobberX, bobberY + 1, bobber, bobberColor);
+        fishingViewPanel.put(bobberX, bobberY, line(getDirection(bobberX - lastX, bobberY - lastY)), lineColor);
+        fishingViewPanel.put(bobberX, bobberY + 1, bobber, bobberColor);
         bobberLocation = new Point(bobberX, bobberY + 1);
         fishingViewPanel.refresh();
 
-        for (int x = 1; x < meterPanel.getGridWidth() - 1; x++) {
-            meterPanel.placeCharacter(x, 1, ' ');
+        for (int x = 1; x < meterPanel.gridWidth() - 1; x++) {
+            meterPanel.put(x, 1, ' ');
         }
         meterPanel.refresh();
     }
@@ -1916,8 +1906,7 @@ public class AssaultFish {
     /**
      * Returns the y position of the last space before the terrain bed.
      *
-     * To allow for bounds safety, this method will return 0 as the result if
-     * the bed reaches the top rather than -1.
+     * To allow for bounds safety, this method will return 0 as the result if the bed reaches the top rather than -1.
      *
      * @param x
      * @return
@@ -1935,18 +1924,18 @@ public class AssaultFish {
         for (int x = 0; x < fishWidth; x++) {
             for (int y = 0; y < fishHeight; y++) {
                 if (terrainMap[x][y]) {
-                    fishingViewPanel.clearCell(x, y, getTerrainColor(x, y));
+                    fishingViewPanel.put(x, y, getTerrainColor(x, y));
                 } else if (liquidMap[x][y]) {
-                    fishingViewPanel.clearCell(x, y, getLiquidColor(x, y));
+                    fishingViewPanel.put(x, y, getLiquidColor(x, y));
                 } else {
-                    fishingViewPanel.clearCell(x, y, getSkyColor(x, y));
+                    fishingViewPanel.put(x, y, getSkyColor(x, y));
                 }
             }
         }
 
 //        fishPane.erase();
         for (Fish f : fishes) {
-            fishPane.placeCharacter(f.x, f.y, f.symbol.charAt(0), f.color);
+            fishPane.put(f.x, f.y, f.symbol.charAt(0), f.color);
         }
 
         fishPane.refresh();
@@ -2040,10 +2029,10 @@ public class AssaultFish {
         }
 
         //place player
-        largeTextPane.placeCharacter(1, 2, '@', playerColor);
+        largeTextPane.put(1, 2, '@', playerColor);
     }
 
-    private char line(Direction dir) {
+    private char line(DirectionIntercardinal dir) {
         switch (dir) {//╱╲─╭╮
             case LEFT:
             case RIGHT:
@@ -2063,9 +2052,9 @@ public class AssaultFish {
     }
 
     private void initMeter() {
-        meterPanel.placeHorizontalString((meterPanel.getGridWidth() - "Cast Strength".length() - 1) / 2, 0, "Cast Strength");
-        meterPanel.placeHorizontalString(2, 0, "None");
-        meterPanel.placeHorizontalString(meterPanel.getGridWidth() - 3 - "Max".length(), 0, "Max");
+        meterPanel.put((meterPanel.gridWidth() - "Cast Strength".length() - 1) / 2, 0, "Cast Strength");
+        meterPanel.put(2, 0, "None");
+        meterPanel.put(meterPanel.gridWidth() - 3 - "Max".length(), 0, "Max");
         meterPanel.refresh();
     }
 
@@ -2077,8 +2066,8 @@ public class AssaultFish {
         long time, lastTime;
 
         public void reset() {
-            for (int i = 0; i < meterPanel.getGridWidth(); i++) {
-                meterPanel.clearCell(i, 1);
+            for (int i = 0; i < meterPanel.gridWidth(); i++) {
+                meterPanel.clear(i, 1);
             }
             meterPanel.refresh();
         }
@@ -2096,9 +2085,9 @@ public class AssaultFish {
             drawX = Math.min(drawX, meterSize);//make sure rare case of strength 1 doesn't cause problems
             for (int i = 0; i < meterSize; i++) {
                 if (i < drawX) {
-                    meterPanel.placeCharacter(i + meterOffset, 1, '●', SColorFactory.fromPallet("meter", i / (float) (meterSize)));
+                    meterPanel.put(i + meterOffset, 1, '●', SColorFactory.fromPallet("meter", i / (float) (meterSize)));
                 } else {
-                    meterPanel.clearCell(i + meterOffset, 1);
+                    meterPanel.clear(i + meterOffset, 1);
                 }
             }
             meterPanel.refresh();
