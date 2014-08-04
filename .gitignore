@@ -3,5 +3,5 @@
 # Package Files #
 *.war
 *.ear
-nbproject/
+nbproject/private/
 build/
