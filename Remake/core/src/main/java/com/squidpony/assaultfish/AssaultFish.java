@@ -1,12 +1,17 @@
 package com.squidpony.assaultfish;
 
+import assaultfish.mapping.MapCell;
+import assaultfish.physical.*;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import squidpony.ArrayTools;
@@ -17,23 +22,15 @@ import squidpony.squidai.DijkstraMap;
 import squidpony.squidgrid.Direction;
 import squidpony.squidgrid.FOV;
 import squidpony.squidgrid.Radius;
-import squidpony.squidgrid.gui.gdx.DefaultResources;
-import squidpony.squidgrid.gui.gdx.MapUtility;
-import squidpony.squidgrid.gui.gdx.PanelEffect;
-import squidpony.squidgrid.gui.gdx.SColor;
-import squidpony.squidgrid.gui.gdx.SparseLayers;
-import squidpony.squidgrid.gui.gdx.SquidInput;
-import squidpony.squidgrid.gui.gdx.SquidMouse;
-import squidpony.squidgrid.gui.gdx.TextCellFactory;
+import squidpony.squidgrid.gui.gdx.*;
 import squidpony.squidgrid.mapping.DungeonGenerator;
 import squidpony.squidgrid.mapping.DungeonUtility;
 import squidpony.squidgrid.mapping.LineKit;
-import squidpony.squidmath.Coord;
-import squidpony.squidmath.GreasedRegion;
-import squidpony.squidmath.RNG;
+import squidpony.squidmath.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeMap;
 
 /**
  * This is a small, not-overly-simple demo that presents some important features of SquidLib and shows a faster,
@@ -50,75 +47,96 @@ import java.util.List;
  */
 public class AssaultFish extends ApplicationAdapter {
     SpriteBatch batch;
+    private static final String version = "2.0.0";
 
-    private RNG rng;
-    private SparseLayers display, languageDisplay;
-    private DungeonGenerator dungeonGen;
-    // decoDungeon stores the dungeon map with features like grass and water, if present, as chars like '"' and '~'.
-    // bareDungeon stores the dungeon map with just walls as '#' and anything not a wall as '.'.
-    // Both of the above maps use '#' for walls, and the next two use box-drawing characters instead.
-    // lineDungeon stores the whole map the same as decoDungeon except for walls, which are box-drawing characters here.
-    // prunedDungeon takes lineDungeon and adjusts it so unseen segments of wall (represented by box-drawing characters)
-    //   are removed from rendering; unlike the others, it is frequently changed.
-    private char[][] decoDungeon, bareDungeon, lineDungeon, prunedDungeon;
-    private float[][] colors, bgColors;
+    private static final double widthScale = 1.2,
+            heightScale = 1.2;
+    private static final int gridWidth = 80,
+            gridHeight = 40,
+            fishHeight = (int) ((gridHeight - 3) * heightScale),
+            fishWidth = (int) (gridWidth * widthScale),
+            largeTextScale = 4,
+            liquidHeight = largeTextScale * 4,
+            terrainWidth = largeTextScale * 2 + 1,
+            maxHealth = 6,
+            healthX = gridWidth - 15,
+            cellWidth = 18,
+            cellHeight = 24,
+            fishCellWidth = 15,
+            fishCellHeight = 20;
+    private static final int maxFish = 6;
+    private static final int overlayAlpha = 100;
+    private static BitmapFont font;
+    private static long outputEndTime;
+    private static final Rectangle helpIconLocation = new Rectangle(gridWidth - 5, 1, 4, 1),
+            muteIconLocation = new Rectangle(gridWidth - 5, 2, 4, 1),
+            exitIconLocation = new Rectangle(gridWidth - 5, 3, 4, 1);
 
-    //Here, gridHeight refers to the total number of rows to be displayed on the screen.
-    //We're displaying 25 rows of dungeon, then 7 more rows of text generation to show some tricks with language.
-    //gridHeight is 25 because that variable will be used for generating the dungeon (the actual size of the dungeon
-    //will be triple gridWidth and triple gridHeight), and determines how much off the dungeon is visible at any time.
-    //The bonusHeight is the number of additional rows that aren't handled like the dungeon rows and are shown in a
-    //separate area; here we use them for translations. The gridWidth is 90, which means we show 90 grid spaces
-    //across the whole screen, but the actual dungeon is larger. The cellWidth and cellHeight are 10 and 20, which will
-    //match the starting dimensions of a cell in pixels, but won't be stuck at that value because we use a "Stretchable"
-    //font, and so the cells can change size (they don't need to be scaled by equal amounts, either). While gridWidth
-    //and gridHeight are measured in spaces on the grid, cellWidth and cellHeight are the initial pixel dimensions of
-    //one cell; resizing the window can make the units cellWidth and cellHeight use smaller or larger than a pixel.
+    //    private static final String fishingPole = "🎣",//fishing pole and fish
+//            whale = "🐋",//whale
+//            octopus = "🐙",//octopus
+//            //fish = "🐟",//fish
+//            tropicalFish = "🐠",//tropical fish
+//            blowfish = "🐡",//blowfish
+//            spoutingWhale = "🐳",//spouting whale
+//            gemstone = "💎",//gemstone
+//            moneyBag = "💰";//money bag
+    private final FOV fov = new FOV(FOV.SHADOW);
+    private final GWTRNG rng = new GWTRNG(0x31337BEEFCA77L);
 
-    /** In number of cells */
-    private static final int gridWidth = 90;
-    /** In number of cells */
-    private static final int gridHeight = 25;
+    private TextCellFactory textFactory;
+    private TextCellFactory fishText;
 
-    /** In number of cells */
-    private static final int bigWidth = gridWidth * 2;
-    /** In number of cells */
-    private static final int bigHeight = gridHeight * 2;
+    private SparseLayers mapPanel, outputPanel, meterPanel,
+            fishingLayers, helpPane, fishThrowingPanel,
+            winPane, diePane;
+    private assaultfish.AssaultFish.MeterListener meterListener;
+    private assaultfish.AssaultFish.FishMouse fishMouse;
+    private assaultfish.AssaultFish.MapMouse mapMouse;
+    private assaultfish.AssaultFish.MapKeys mapKeys;
+    private assaultfish.AssaultFish.FishInventoryMouse inventoryMouse;
 
-    /** In number of cells */
-    private static final int bonusHeight = 7;
-    /** The pixel width of a cell */
-    private static final int cellWidth = 10;
-    /** The pixel height of a cell */
-    private static final int cellHeight = 20;
+    private Creature player;
+
+    private ArrayList<Creature> monsters = new ArrayList<>();
+    //private ArrayList<Treasure> treasuresFound = new ArrayList<>();
+    private MapCell[][] map;
+
+    private Fish selectedFish = null;
+    private SparseLayers overlayPanel;
+    private Coord overlayLocation = Coord.get(-1, -1);
+
+    private final TreeMap<Element, TreeMap<Size, Integer>> fishInventory = new TreeMap<>();
+    private SparseLayers fishInventoryPanel;
+
+    private boolean casting = false, canCast = false, canClick = true;
+    private double castingStrength = 0.4;
+
+    /* ------------------ From FishingPanel ------------------------- */
+    private boolean[][] terrainMap;
+    private boolean[][] liquidMap;
+    private Fish[][] fishMap;
+    private OrderedSet<Fish> fishes = new OrderedSet<>();
+    private double wind = 10, gravity = 20;
+    private Terrain terrain;
+    private Element element;
+    private char bobber = '●',//O•☉✆✇♁┢Ø∅∮⊕⊖⊗⊘⊙⊚⊛⊜⊝Ⓧ◍◎●◐◑◒◓◔◕☯☮☻☺☹✪➊➋➌➍➎➏➐➑➒➓〄〇〶
+            hook = 'J',
+            wall = '#';
+    private Coord bobberLocation;
+    private SColor lineColor = SColor.BURNT_BAMBOO,
+            bobberColor = SColor.SCARLET,
+            hookColor = SColor.BRASS,
+            skyColor = SColor.ALICE_BLUE,
+            playerColor = SColor.BETEL_NUT_DYE;
+    private ArrayList<Color> meterPalette;
+    private boolean nowFishing = false;
+
+    private static final String SOUND_PREF = "Sound Pref";
+
     private SquidInput input;
     private Color bgColor;
     private Stage stage, languageStage;
-    private DijkstraMap playerToCursor;
-    private Coord cursor, player;
-    private List<Coord> toCursor;
-    private List<Coord> awaitedMoves;
-    // a passage from the ancient text The Art of War, which remains relevant in any era but is mostly used as a basis
-    // for translation to imaginary languages using the NaturalLanguageCipher and FakeLanguageGen classes.
-    private final String artOfWar =
-            "Sun Tzu said: In the practical art of war, the best thing of all is to take the " +
-                    "enemy's country whole and intact; to shatter and destroy it is not so good. So, " +
-                    "too, it is better to recapture an army entire than to destroy it, to capture " +
-                    "a regiment, a detachment or a company entire than to destroy them. Hence to fight " +
-                    "and conquer in all your battles is not supreme excellence; supreme excellence " +
-                    "consists in breaking the enemy's resistance without fighting.";
-    // A translation dictionary for going back and forth between English and an imaginary language that this generates
-    // words for, using some of the rules that the English language tends to follow to determine if two words should
-    // share a common base word (such as "read" and "reader" needing similar translations). This is given randomly
-    // selected languages from the FakeLanguageGen class, which is able to produce text that matches a certain style,
-    // usually that of a natural language but some imitations of fictional languages, such as languages spoken by elves,
-    // goblins, or demons, are present as well. An unusual trait of FakeLanguageGen is that it can mix two or more
-    // languages to make a new one, which most other kinds of generators have a somewhat-hard time doing.
-    private NaturalLanguageCipher translator;
-    // this is initialized with the word-wrapped contents of artOfWar, then has translations of that text to imaginary
-    // languages appended after the plain-English version. The contents have the first item removed with each step, and
-    // have new translations added whenever the line count is too low.
-    private ArrayList<String> lang;
     private double[][] resistance;
     private double[][] visible;
     // GreasedRegion is a hard-to-explain class, but it's an incredibly useful one for map generation and many other
@@ -137,27 +155,44 @@ public class AssaultFish extends ApplicationAdapter {
     // rules of Label, which older SquidLib code used when it needed text in an Actor. Glyphs are also lighter-weight in
     // memory usage and time taken to draw than Labels.
     private TextCellFactory.Glyph pg;
-    // libGDX can use a kind of packed float (yes, the number type) to efficiently store colors, but it also uses a
-    // heavier-weight Color object sometimes; SquidLib has a large list of SColor objects that are often used as easy
-    // predefined colors since SColor extends Color. SparseLayers makes heavy use of packed float colors internally,
-    // but also allows Colors instead for most methods that take a packed float. Some cases, like very briefly-used
-    // colors that are some mix of two other colors, are much better to create as packed floats from other packed
-    // floats, usually using SColor.lerpFloatColors(), which avoids creating any objects. It's ideal to avoid creating
-    // new objects (such as Colors) frequently for only brief usage, because this can cause temporary garbage objects to
-    // build up and slow down the program while they get cleaned up (garbage collection, which is slower on Android).
-    // Recent versions of SquidLib include the packed float literal in the JavaDocs for any SColor, along with previews
-    // of that SColor as a background and foreground when used with other colors, plus more info like the hue,
-    // saturation, and value of the color. Here we just use the packed floats directly from the SColor docs, but we also
-    // mention what color it is in a line comment, which is a good habit so you can see a preview if needed.
-    // The format used for the floats is a hex literal; these are explained at the bottom of this file, in case you
-    // aren't familiar with them (they're a rather obscure feature of Java 5 and newer).
-    private static final float FLOAT_LIGHTING = -0x1.cff1fep126F, // same result as SColor.COSMIC_LATTE.toFloatBits()
-            GRAY_FLOAT = -0x1.7e7e7ep125F; // same result as SColor.CW_GRAY_BLACK.toFloatBits()
 
     @Override
     public void create () {
-        // gotta have a random number generator. We can seed an RNG with any long we want, or even a String.
-        rng = new RNG("SquidLib!");
+        com.badlogic.gdx.Preferences prefs = Gdx.app.getPreferences("AssaultFish");
+        boolean soundOn = prefs.getBoolean(SOUND_PREF, true); // "a string"
+
+        Music music = Gdx.audio.newMusic(Gdx.files.internal("Eden.mp3"));
+        if (!soundOn) {
+            music.setVolume(0);
+        }
+        music.setLooping(true);
+        music.play();
+
+        SquidColorCenter scc = DefaultResources.getSCC();
+        meterPalette = scc.gradient(SColor.RED, SColor.ORANGE);
+        meterPalette.addAll(scc.gradient(SColor.ORANGE, SColor.YELLOW));
+        meterPalette.addAll(scc.gradient(SColor.YELLOW, SColor.ELECTRIC_GREEN));
+        textFactory = DefaultResources.getCrispDejaVuFont().width(cellWidth).height(cellHeight).initBySize();
+        Fish.initSymbols(textFactory.font());
+        //dummy up starting inventory
+        for (Element e : Element.values()) {
+            fishInventory.put(e, new TreeMap<Size, Integer>());
+            for (Size s : Size.values()) {
+                fishInventory.get(e).put(s, rng.nextInt(2));
+            }
+        }
+
+        player = new Creature(Creature.PLAYER);
+        player.color = SColor.CORNFLOWER_BLUE;
+
+        initializeFrame();
+        initializeFishInventory();
+
+        showHelp();
+
+        createMap();
+        updateMap();
+        flipMouseControl(true);
 
         //Some classes in SquidLib need access to a batch to render certain things, so it's a good idea to have one.
         batch = new SpriteBatch();
