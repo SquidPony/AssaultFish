@@ -1,12 +1,12 @@
 package assaultfish.mapping;
 
-import assaultfish.physical.Item;
 import assaultfish.physical.Creature;
-import assaultfish.physical.Element;
+import assaultfish.physical.Item;
 import assaultfish.physical.Terrain;
 import assaultfish.physical.TerrainFeature;
-import squidpony.squidcolor.SColor;
+import com.badlogic.gdx.graphics.Color;
 import squidpony.squidcolor.SColorFactory;
+import squidpony.squidgrid.gui.gdx.SColor;
 
 /**
  * Represents a single square in the game world.
@@ -19,7 +19,7 @@ public class MapCell {
     public Terrain terrain;
     public TerrainFeature feature;
     public Item item;
-    public SColor light = SColor.BLACK;
+    public Color light = SColor.BLACK;
     public boolean seen = false;
 
     public MapCell() {
@@ -34,12 +34,12 @@ public class MapCell {
         this.feature = feature;
     }
 
-    public SColor backgroundColor() {
+    public Color backgroundColor() {
         if (seen) {
             if (light.equals(SColor.BLACK) || terrain.element != null) {
-                return SColorFactory.dimmest(SColor.BLACK_DYE);
+                return SColor.BLACK_DYE.cpy().lerp(SColor.BLACK, 0.7f);
             } else {
-                return SColorFactory.dimmest(terrain.color);
+                return SColor.colorFromFloat(SColor.lerpFloatColors(terrain.color, SColor.FLOAT_BLACK, 0.7f));
             }
         } else {
             return SColor.BLACK;

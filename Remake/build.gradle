@@ -29,11 +29,12 @@ subprojects {
   version = '2.0.0-SNAPSHOT'
   ext.appName = 'AssaultFish'
   repositories {
-    mavenLocal()
     mavenCentral()
     jcenter()
     maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
     maven { url 'https://jitpack.io' }
+    mavenLocal()
+
   }
 }
 

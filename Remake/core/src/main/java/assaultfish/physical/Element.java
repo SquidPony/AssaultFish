@@ -24,6 +24,7 @@ public enum Element {
 
     public final String name, adjective, presentVerb, pastVerb;
     public final SColor color;
+    public final float floatColor;
     private static final OrderedMap<Element, HashMap<Element, Element>> transform = new OrderedMap<>();
 
     static {
@@ -132,6 +133,7 @@ public enum Element {
         this.presentVerb = presentVerb;
         this.pastVerb = pastVerb;
         this.color = color;
+        floatColor = color.toFloatBits();
     }
 
     public Element combine(Element other) {
