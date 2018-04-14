@@ -7,6 +7,8 @@ import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import squidpony.squidgrid.Direction;
 import squidpony.squidgrid.FOV;
 import squidpony.squidgrid.Radius;
@@ -181,8 +183,7 @@ public class AssaultFish {
             Color fade = SColor.DARK_GRAY;
             SColor heading = SColor.RED_PIGMENT;
             Color command = SColor.SCHOOL_BUS_YELLOW;
-            Color sc = fade.cpy();
-            sc.a = 150f / 255f;
+            float sc = SColor.toEditedFloat(fade, 0f, 0f, 0f, -0.4f);
             for (int x = 0; x < helpPane.gridWidth(); x++) {
                 helpPane.put(x, 0, sc);
                 helpPane.put(x, 1, sc);
@@ -195,7 +196,7 @@ public class AssaultFish {
                 helpPane.put(helpPane.gridWidth() - 1, y, sc);
                 helpPane.put(helpPane.gridWidth() - 2, y, sc);
             }
-            sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 240);
+            sc = SColor.toEditedFloat(fade, 0f, 0f, 0f, -0.06f);
             for (int x = 2; x < helpPane.gridWidth() - 2; x++) {
                 for (int y = 2; y < helpPane.gridHeight() - 2; y++) {
                     helpPane.put(x, y, sc);
@@ -214,27 +215,27 @@ public class AssaultFish {
 
             text = "Your peaceful life as a fisherman has come to an end.";
             x = left;//left justified
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 1;
 
             text = "A horde of elementals has decended upon the land and it is your duty";
             x = left;//left justified
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 1;
 
             text = "to fight them any way you can! And that means using the fishing skills";
             x = left;//left justified
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 1;
 
             text = "of your forefathers to fish from the many local elemental pools and";
             x = left;//left justified
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 1;
 
             text = "strategically throw your explosive catch at the enemy!";
             x = left;//left justified
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 3;
 
             text = "Main Map Controls";
@@ -244,7 +245,7 @@ public class AssaultFish {
 
             text = "Without a fish selected for throwing:";
             x = (helpPane.gridWidth() - text.length()) / 2;//centered
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 1;
 
             text = "Left click";
@@ -252,7 +253,7 @@ public class AssaultFish {
             helpPane.put(x, y, text, command);
             x += text.length();
             text = " - move";
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 1;
 
             text = "Ctrl-Left click";
@@ -260,7 +261,7 @@ public class AssaultFish {
             helpPane.put(x, y, text, command);
             x += text.length();
             text = " - examine";
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 1;
 
             text = "Left click on fish";
@@ -268,12 +269,12 @@ public class AssaultFish {
             helpPane.put(x, y, text, command);
             x += text.length();
             text = " - select fish";
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 3;
 
             text = "With a fish selected for throwing:";
             x = (helpPane.gridWidth() - text.length()) / 2;//centered
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 1;
 
             text = "Left click";
@@ -281,7 +282,7 @@ public class AssaultFish {
             helpPane.put(x, y, text, command);
             x += text.length();
             text = " - throw fish";
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 1;
 
             text = "Right click";
@@ -289,7 +290,7 @@ public class AssaultFish {
             helpPane.put(x, y, text, command);
             x += text.length();
             text = " - deselect fish";
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 1;
 
             text = "Left click on fish";
@@ -297,7 +298,7 @@ public class AssaultFish {
             helpPane.put(x, y, text, command);
             x += text.length();
             text = " - select a new fish";
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 1;
 
             text = "Left click on the slected fish";
@@ -305,7 +306,7 @@ public class AssaultFish {
             helpPane.put(x, y, text, command);
             x += text.length();
             text = " - deselect fish";
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 3;
 
             text = "Fishing Controls";
@@ -318,7 +319,7 @@ public class AssaultFish {
             helpPane.put(x, y, text, command);
             x += text.length();
             text = " - start casting meter / cast";
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 1;
 
             text = "Right click";
@@ -326,7 +327,7 @@ public class AssaultFish {
             helpPane.put(x, y, text, command);
             x += text.length();
             text = " - stop fishing";
-            helpPane.put(x, y, text);
+            helpPane.put(x, y, text, SColor.WHITE);
             y += 3;
 
             text = "Elemental enemies are destroyed by";
@@ -401,10 +402,6 @@ public class AssaultFish {
             x = (helpPane.gridWidth() - text.length()) / 2;//centered
             y = gridHeight - 3;
             helpPane.put(x, y, text, heading);
-
-            helpPane.refresh();
-            layers.setLayer(helpPane, JLayeredPane.DRAG_LAYER);
-
             helpPane.addMouseListener(new MouseInputAdapter() {
 
                 @Override
@@ -415,7 +412,7 @@ public class AssaultFish {
 
             });
         }
-        layers.add(helpPane);
+        stage.add(helpPane);
     }
 
     private void goFish() {
@@ -737,12 +734,11 @@ public class AssaultFish {
     private void win() {
         canClick = false;
         if (winPane == null) {
-            winPane = new SwingPane(gridWidth, gridHeight, textFactory, null);
-            winPane.erase();
+            winPane = new SparseLayers(gridWidth, gridHeight, cellWidth, cellHeight, textFactory);
             SColor fade = SColor.DARK_GRAY;
             SColor heading = SColor.RED_PIGMENT;
             SColor command = SColor.SCHOOL_BUS_YELLOW;
-            SColor sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 150);
+            float sc = SColor.translucentColor(fade.toFloatBits(), 0.6f);
             for (int x = 0; x < winPane.gridWidth(); x++) {
                 winPane.put(x, 0, sc);
                 winPane.put(x, 1, sc);
@@ -755,7 +751,7 @@ public class AssaultFish {
                 winPane.put(winPane.gridWidth() - 1, y, sc);
                 winPane.put(winPane.gridWidth() - 2, y, sc);
             }
-            sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 240);
+            sc = SColor.translucentColor(sc, 0.94f);
             for (int x = 2; x < winPane.gridWidth() - 2; x++) {
                 for (int y = 2; y < winPane.gridHeight() - 2; y++) {
                     winPane.put(x, y, sc);
@@ -774,35 +770,34 @@ public class AssaultFish {
 
             text = "Your peaceful life as a fisherman has come to an end.";
             x = left;//left justified
-            winPane.put(x, y, text);
+            winPane.put(x, y, text, SColor.WHITE);
             y += 1;
             text = "Because you destroyed the elemental menace.";
             x = left;//left justified
-            winPane.put(x, y, text);
+            winPane.put(x, y, text, SColor.WHITE);
             y += 2;
             text = "Your fame and prowess are now legendary across the land! Your";
             x = left;//left justified
-            winPane.put(x, y, text);
+            winPane.put(x, y, text, SColor.WHITE);
             y += 1;
             text = "nights are filled with the shouts and laughter of all your";
             x = left;//left justified
-            winPane.put(x, y, text);
+            winPane.put(x, y, text, SColor.WHITE);
             y += 1;
             text = "friends and family.";
             x = left;//left justified
-            winPane.put(x, y, text);
+            winPane.put(x, y, text, SColor.WHITE);
             y += 2;
             text = "You live happily ever after.";
             x = left;//left justified
-            winPane.put(x, y, text);
+            winPane.put(x, y, text, SColor.WHITE);
             y += 1;
 
             text = "--  press right mouse to restart or left mouse to quit --";
             x = (winPane.gridWidth() - text.length()) / 2;//centered
             y = gridHeight - 3;
             winPane.put(x, y, text, SColor.ELECTRIC_GREEN);
-
-            winPane.refresh();
+            
             layers.setLayer(winPane, JLayeredPane.DRAG_LAYER);
 
             final long readTime = System.currentTimeMillis() + 200;
@@ -827,12 +822,11 @@ public class AssaultFish {
     private void die(String reason) {
         canClick = false;
         if (diePane == null) {
-            diePane = new SwingPane(gridWidth, gridHeight, textFactory, null);
-            diePane.erase();
+            diePane = new SparseLayers(gridWidth, gridHeight, cellWidth, cellHeight, textFactory);
             SColor fade = SColor.DARK_GRAY;
             SColor heading = SColor.RED_PIGMENT;
             SColor command = SColor.SCHOOL_BUS_YELLOW;
-            SColor sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 150);
+            float sc = SColor.translucentColor(fade.toFloatBits(), 0.6f);
             for (int x = 0; x < diePane.gridWidth(); x++) {
                 diePane.put(x, 0, sc);
                 diePane.put(x, 1, sc);
@@ -845,7 +839,7 @@ public class AssaultFish {
                 diePane.put(diePane.gridWidth() - 1, y, sc);
                 diePane.put(diePane.gridWidth() - 2, y, sc);
             }
-            sc = new SColor(fade.getRed(), fade.getGreen(), fade.getBlue(), 240);
+            sc = SColor.translucentColor(sc, 0.94f);
             for (int x = 2; x < diePane.gridWidth() - 2; x++) {
                 for (int y = 2; y < diePane.gridHeight() - 2; y++) {
                     diePane.put(x, y, sc);
@@ -864,32 +858,31 @@ public class AssaultFish {
 
             text = "Your peaceful life as a fisherman has come to an end.";
             x = left;//left justified
-            diePane.put(x, y, text);
+            diePane.put(x, y, text, SColor.WHITE);
             y += 1;
             text = "Because you died.";
             x = left;//left justified
-            diePane.put(x, y, text);
+            diePane.put(x, y, text, SColor.WHITE);
             y += 2;
             text = "It's lucky for you though, now you don't have to hear the";
             x = left;//left justified
-            diePane.put(x, y, text);
+            diePane.put(x, y, text, SColor.WHITE);
             y += 1;
             text = "screams of your friends and loved ones as they are torn apart";
             x = left;//left justified
-            diePane.put(x, y, text);
+            diePane.put(x, y, text, SColor.WHITE);
             y += 1;
-            text = "by vicious elemental beings.";
+            text = "by vicious elemental beings. You kinda don't mind Neumann dying though.";
             x = left;//left justified
-            diePane.put(x, y, text);
+            diePane.put(x, y, text, SColor.WHITE);
             y += 3;
 
-            text = "You died because:";
+            text = "Neumann stole your mail twice. That jerk. You died because:";
             x = left;//left justified
-            diePane.put(x, y, text, SColor.SAFETY_ORANGE);
+            diePane.put(x, y, text, SColor.WHITE);
             y += 1;
-            text = reason;
             x = left;//left justified
-            diePane.put(x, y, text);
+            diePane.put(x, y, reason, SColor.SAFETY_ORANGE);
             y += 1;
 
             text = "--  press right mouse to restart or left mouse to quit --";
@@ -897,14 +890,13 @@ public class AssaultFish {
             y = gridHeight - 3;
             diePane.put(x, y, text, SColor.ELECTRIC_GREEN);
 
-            diePane.refresh();
             layers.setLayer(diePane, JLayeredPane.DRAG_LAYER);
 
             final long readTime = System.currentTimeMillis() + 200;
-            diePane.addMouseListener(new MouseInputAdapter() {
-
+            diePane.addListener(new ClickListener(){
                 @Override
-                public void mousePressed(MouseEvent e) {
+                public void clicked(InputEvent event, float x, float y) {
+                    super.clicked(event, x, y);
                     if (System.currentTimeMillis() > readTime) {
                         if (SwingUtilities.isLeftMouseButton(e)) {
                             exiting();
@@ -912,11 +904,11 @@ public class AssaultFish {
                             restart();
                         }
                     }
+                    
                 }
-
             });
         }
-        layers.add(diePane);
+        stage.addActor(diePane);
     }
 
     private void addFish(Fish fish) {

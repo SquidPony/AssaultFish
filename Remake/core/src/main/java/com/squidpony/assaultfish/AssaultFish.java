@@ -2,17 +2,16 @@ package com.squidpony.assaultfish;
 
 import assaultfish.mapping.MapCell;
 import assaultfish.physical.*;
-import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.InputAdapter;
-import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.*;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import squidpony.ArrayTools;
 import squidpony.FakeLanguageGen;
@@ -29,7 +28,7 @@ import squidpony.squidgrid.mapping.LineKit;
 import squidpony.squidmath.*;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Queue;
 import java.util.TreeMap;
 
 /**
@@ -63,7 +62,8 @@ public class AssaultFish extends ApplicationAdapter {
             cellWidth = 18,
             cellHeight = 24,
             fishCellWidth = 15,
-            fishCellHeight = 20;
+            fishCellHeight = 20, 
+            bonusHeight = 5;
     private static final int maxFish = 6;
     private static final int overlayAlpha = 100;
     private static BitmapFont font;
@@ -223,7 +223,7 @@ public class AssaultFish extends ApplicationAdapter {
         // This causes a tiny bit of overlap between cells, which gets rid of an annoying gap between solid lines.
         // If you use '#' for walls instead of box drawing chars, you don't need this.
         // If you don't use DefaultResources.getStretchableSlabFont(), you may need to adjust the multipliers here.
-        display.font.tweakWidth(cellWidth * 1.125f).tweakHeight(cellHeight * 1.075f).initBySize();
+        //display.font.tweakWidth(cellWidth * 1.125f).tweakHeight(cellHeight * 1.075f).initBySize();
 
         languageDisplay = new SparseLayers(gridWidth, bonusHeight - 1, cellWidth, cellHeight, display.font);
         // SparseLayers doesn't currently use the default background fields, but this isn't really a problem; we can
@@ -712,30 +712,1068 @@ public class AssaultFish extends ApplicationAdapter {
         stage.getViewport().setScreenBounds(0, (int)languageDisplay.getHeight(),
                 width, height - (int)languageDisplay.getHeight());
     }
+
+    private void showHelp() {
+        if (helpPane == null) {
+            helpPane = new SparseLayers(gridWidth, gridHeight, cellWidth, cellHeight, textFactory);
+            Color fade = SColor.DARK_GRAY;
+            SColor heading = SColor.RED_PIGMENT;
+            Color command = SColor.SCHOOL_BUS_YELLOW;
+            float sc = SColor.toEditedFloat(fade, 0f, 0f, 0f, -0.4f);
+            for (int x = 0; x < helpPane.gridWidth(); x++) {
+                helpPane.put(x, 0, sc);
+                helpPane.put(x, 1, sc);
+                helpPane.put(x, helpPane.gridHeight() - 1, sc);
+                helpPane.put(x, helpPane.gridHeight() - 2, sc);
+            }
+            for (int y = 0; y < helpPane.gridHeight(); y++) {
+                helpPane.put(0, y, sc);
+                helpPane.put(1, y, sc);
+                helpPane.put(helpPane.gridWidth() - 1, y, sc);
+                helpPane.put(helpPane.gridWidth() - 2, y, sc);
+            }
+            sc = SColor.toEditedFloat(fade, 0f, 0f, 0f, -0.06f);
+            for (int x = 2; x < helpPane.gridWidth() - 2; x++) {
+                for (int y = 2; y < helpPane.gridHeight() - 2; y++) {
+                    helpPane.put(x, y, sc);
+                }
+            }
+
+            String text;
+            int x;
+            int y = 3;
+            int left = 5;
+
+            text = "ASSAULT FISH  v" + version;
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
+            helpPane.put(x, y, text, heading);
+            y += 2;
+
+            text = "Your peaceful life as a fisherman has come to an end.";
+            x = left;//left justified
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+
+            text = "A horde of elementals has decended upon the land and it is your duty";
+            x = left;//left justified
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+
+            text = "to fight them any way you can! And that means using the fishing skills";
+            x = left;//left justified
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+
+            text = "of your forefathers to fish from the many local elemental pools and";
+            x = left;//left justified
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+
+            text = "strategically throw your explosive catch at the enemy!";
+            x = left;//left justified
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 3;
+
+            text = "Main Map Controls";
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
+            helpPane.put(x, y, text, heading);
+            y += 2;
+
+            text = "Without a fish selected for throwing:";
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+
+            text = "Left click";
+            x = left;//left justified
+            helpPane.put(x, y, text, command);
+            x += text.length();
+            text = " - move";
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+
+            text = "Ctrl-Left click";
+            x = left;
+            helpPane.put(x, y, text, command);
+            x += text.length();
+            text = " - examine";
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+
+            text = "Left click on fish";
+            x = left;//left justified
+            helpPane.put(x, y, text, command);
+            x += text.length();
+            text = " - select fish";
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 3;
+
+            text = "With a fish selected for throwing:";
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+
+            text = "Left click";
+            x = left;//left justified
+            helpPane.put(x, y, text, command);
+            x += text.length();
+            text = " - throw fish";
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+
+            text = "Right click";
+            x = left;
+            helpPane.put(x, y, text, command);
+            x += text.length();
+            text = " - deselect fish";
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+
+            text = "Left click on fish";
+            x = left;//left justified
+            helpPane.put(x, y, text, command);
+            x += text.length();
+            text = " - select a new fish";
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+
+            text = "Left click on the slected fish";
+            x = left;//left justified
+            helpPane.put(x, y, text, command);
+            x += text.length();
+            text = " - deselect fish";
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 3;
+
+            text = "Fishing Controls";
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
+            helpPane.put(x, y, text, heading);
+            y += 1;
+
+            text = "Left click";
+            x = left;//left justified
+            helpPane.put(x, y, text, command);
+            x += text.length();
+            text = " - start casting meter / cast";
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+
+            text = "Right click";
+            x = left;//left justified
+            helpPane.put(x, y, text, command);
+            x += text.length();
+            text = " - stop fishing";
+            helpPane.put(x, y, text, SColor.WHITE);
+            y += 3;
+
+            text = "Elemental enemies are destroyed by";
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
+            helpPane.put(x, y, text, heading);
+            y += 1;
+
+            text = "Acid";
+            x = left;//left justified
+            helpPane.put(x, y, text, Element.ACID.color);
+            x += text.length();
+            text = " - Sand";
+            helpPane.put(x, y, text, Element.SAND.color);
+            y += 1;
+
+            text = "Air";
+            x = left;//left justified
+            helpPane.put(x, y, text, Element.AIR.color);
+            x += text.length();
+            text = " - Mana";
+            helpPane.put(x, y, text, Element.MANA.color);
+            y += 1;
+
+            text = "Blood";
+            x = left;//left justified
+            helpPane.put(x, y, text, Element.BLOOD.color);
+            x += text.length();
+            text = " - Tar";
+            helpPane.put(x, y, text, Element.TAR.color);
+            y -= 2;
+
+            text = "Magma";
+            x = left + 20;
+            helpPane.put(x, y, text, Element.MAGMA.color);
+            x += text.length();
+            text = " - Water";
+            helpPane.put(x, y, text, Element.WATER.color);
+            y += 1;
+
+            text = "Mana";
+            x = left + 20;
+            helpPane.put(x, y, text, Element.MANA.color);
+            x += text.length();
+            text = " - Blood";
+            helpPane.put(x, y, text, Element.BLOOD.color);
+            y += 1;
+
+            text = "Sand";
+            x = left + 20;
+            helpPane.put(x, y, text, Element.SAND.color);
+            x += text.length();
+            text = " - Acid";
+            helpPane.put(x, y, text, Element.ACID.color);
+            y -= 2;
+
+            text = "Tar";
+            x = left + 40;
+            helpPane.put(x, y, text, Element.TAR.color);
+            x += text.length();
+            text = " - Magma";
+            helpPane.put(x, y, text, Element.MAGMA.color);
+            y += 1;
+
+            text = "Water";
+            x = left + 40;
+            helpPane.put(x, y, text, Element.WATER.color);
+            x += text.length();
+            text = " - Air";
+            helpPane.put(x, y, text, Element.AIR.color);
+
+            text = "--  press mouse button to continue --";
+            x = (helpPane.gridWidth() - text.length()) / 2;//centered
+            y = gridHeight - 3;
+            helpPane.put(x, y, text, heading);
+            helpPane.addListener(new ClickListener(){
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    super.clicked(event, x, y);
+                    stage.getActors().removeValue(helpPane, true);
+                }
+            });
+        }
+        stage.addActor(helpPane);
+    }
+
+    private void goFish() {
+        nowFishing = true;
+        selectedFish = null;
+        updateFishInventoryPanel();
+        fishes.clear();
+        fishingLayers.clear(1);
+        for (int i = 0; i < 40; i++) {
+            fishes.add(new Fish(Size.SMALL, element));
+        }
+        for (int i = 0; i < 20; i++) {
+            fishes.add(new Fish(Size.MEDIUM, element));
+        }
+        for (int i = 0; i < 10; i++) {
+            fishes.add(new Fish(Size.LARGE, element));
+        }
+        for (int i = 0; i < 2; i++) {
+            fishes.add(new Fish(Size.GIANT, element));
+        }
+
+        initFishingMap();
+        initFish();
+        initFishingDisplay();
+        //fishingMasterPanel.setVisible(true);
+        //layers.add(fishingMasterPanel);
+        stage.addActor(fishingLayers);
+        flipMouseControl(false);
+        printOut("You are now fishing from " + terrain.name + " shore into the " + element.name + " lake.");
+        canCast = true;
+    }
+
+    /**
+     * This is the main game loop method that takes input and process the results. Right now it doesn't loop!
+     */
+    private void runTurn() {
+        updateMap();
+
+        if (monsters.isEmpty()) {
+            win();
+        }
+
+        checkForReactions();
+
+        moveAllMonsters();
+        updateMap();
+    }
+
+    private void workClick(final int x, final int y) {
+//        Thread thread = new Thread(new Runnable() {
+//
+//            @Override
+//            public void run() {
+        boolean success = tryToMove(Direction.getDirection(x - player.x, y - player.y));
+        if (success) {
+            runTurn();
+        }
+//            }
+//        });
+//        thread.start();
+    }
+
+    private void exiting() {
+//        printOut("Thanks for playing, press any key to exit.");
+//        keyListener.blockOnEmpty(false);
+//        keyListener.flush();
+//        while (!keyListener.hasNext()) {
+//            Thread.yield();
+//        }
+        System.exit(0);
+    }
+
+    private void throwFish(int targetX, int targetY) {
+        if (selectedFish == null) {
+            return;
+        }
+
+        int n = fishInventory.get(selectedFish.element).get(selectedFish.size);
+        if (n < 1) {
+            selectedFish = null;
+            return;
+        }
+
+        stage.getActors().removeValue(overlayPanel, true);
+
+        Radius strat = Radius.CIRCLE;
+        int radius = 1;
+        Color c = selectedFish.color;
+        switch (selectedFish.size) {
+            case SMALL:
+                radius = 2;
+                break;
+            case MEDIUM:
+                radius = 3;
+                break;
+            case LARGE:
+                radius = 5;
+                break;
+            case GIANT:
+                radius = 9;
+                break;
+        }
+
+        //find line taken by thrown fish
+        Queue<Coord> line = Bresenham.line2D(Coord.get(player.x, player.y), Coord.get(targetX, targetY));
+        do {
+            Coord p = line.poll();
+            targetX = p.x;
+            targetY = p.y;
+            fishThrowingPanel.clear();
+            fishThrowingPanel.put(targetX, targetY, selectedFish.symbol.charAt(0), selectedFish.color);
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException ex) {
+            }
+        } while (!line.isEmpty()
+                && (map[targetX][targetY].creature == null || map[targetX][targetY].creature == player)
+                && (map[targetX][targetY].feature == null || map[targetX][targetY].feature == TerrainFeature.BUSH));
+        fishThrowingPanel.clear();
+
+        boolean[][] modified = new boolean[gridWidth][gridHeight];
+
+        for (double i = 0; i <= 1; i += 0.1) {
+            double radiusMod = (radius + 0.1) * i;
+            for (int x = (int) (targetX - radiusMod); x <= targetX + radiusMod; x++) {
+                for (int y = (int) (targetY - radiusMod); y <= targetY + radiusMod; y++) {
+                    if (strat.radius(targetX, targetY, x, y) <= radiusMod) {
+                        if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
+                            if (!modified[x][y]) {
+                                reactToElementChange(x, y, selectedFish.element);
+                                fishThrowingPanel.put(x, y, '*', selectedFish.color);
+                                modified[x][y] = true;
+                                mapPanel.put(x, y, map[x][y].getSymbol().charAt(0), map[x][y].foregroundColor());//, map[x][y].backgroundColor());
+                            }
+                        }
+                    }
+                }
+            }
+            updateMap();
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException ex) {
+            }
+        }
+
+        //hacky post-process to hide bugs
+        monsters = new ArrayList<>();
+        for (int x = 0; x < gridWidth; x++) {
+            for (int y = 0; y < gridHeight; y++) {
+                Creature creature = map[x][y].creature;
+                if (creature != null && creature != player) {
+                    creature.x = x;
+                    creature.y = y;
+                    monsters.add(creature);
+//                    if (!monsters.contains(creature)) {
+//                        map[x][y].creature = null;//delete it if it's not in the monster list
+//                    } else {
+//                        if ((map[x][y].feature == null ? false : map[x][y].feature.blocking) || map[x][y].terrain.blocking) {//remove invalid creature
+//                            map[x][y].creature = null;
+//                            monsters.remove(creature);
+//                        }
+//                    }
+                }
+            }
+        }
+        for (Creature creature : monsters) {
+            if (creature != map[creature.x][creature.y].creature) {
+                System.err.println("Invalid creature: " + creature.name + " at " + creature.x + ", " + creature.y + "  should be " + map[creature.x][creature.y].creature);
+            }
+        }
+
+        removeFish(selectedFish);
+        fishThrowingPanel.clear();
+        updateOverlay();
+        stage.addActor(overlayPanel);
+        updateMap();
+        runTurn();
+    }
+
+    private void reactToElementChange(int x, int y, Element e) {
+        //change terrain
+        if (map[x][y].terrain.element == null || map[x][y].terrain.element.combine(selectedFish.element) != map[x][y].terrain.element) {
+            boolean wasLake = map[x][y].terrain.lake;
+            if (wasLake) {
+                map[x][y].terrain = Terrain.makeElementalPool(map[x][y].terrain.element == null ? selectedFish.element : map[x][y].terrain.element.combine(selectedFish.element));
+            } else {
+                map[x][y].terrain = Terrain.makeElementalFloor(map[x][y].terrain.element == null ? selectedFish.element : map[x][y].terrain.element.combine(selectedFish.element), false);
+            }
+        }
+
+        Creature c = map[x][y].creature;
+        //check for creature destruction
+        if (c != null && c != player) {
+            switch (c.element) {
+                case ACID:
+                    if (e == Element.SAND) {
+                        printOut("The " + c.name + " has been destroyed!");
+                        monsters.remove(c);
+                        map[x][y].creature = null;
+                    }
+                    break;
+                case AIR:
+                    if (e == Element.MANA) {
+                        printOut("The " + c.name + " has been destroyed!");
+                        monsters.remove(c);
+                        map[x][y].creature = null;
+                    }
+                    break;
+                case BLOOD:
+                    if (e == Element.TAR) {
+                        printOut("The " + c.name + " has been destroyed!");
+                        monsters.remove(c);
+                        map[x][y].creature = null;
+                    }
+                    break;
+                case MAGMA:
+                    if (e == Element.WATER) {
+                        printOut("The " + c.name + " has been destroyed!");
+                        monsters.remove(c);
+                        map[x][y].creature = null;
+                    }
+                    break;
+                case MANA:
+                    if (e == Element.BLOOD) {
+                        printOut("The " + c.name + " has been destroyed!");
+                        monsters.remove(c);
+                        map[x][y].creature = null;
+                    }
+                    break;
+                case SAND:
+                    if (e == Element.ACID) {
+                        printOut("The " + c.name + " has been destroyed!");
+                        monsters.remove(c);
+                        map[x][y].creature = null;
+                    }
+                    break;
+                case TAR:
+                    if (e == Element.MAGMA) {
+                        printOut("The " + c.name + " has been destroyed!");
+                        monsters.remove(c);
+                        map[x][y].creature = null;
+                    }
+                    break;
+                case WATER:
+                    if (e == Element.AIR) {
+                        printOut("The " + c.name + " has been destroyed!");
+                        monsters.remove(c);
+                        map[x][y].creature = null;
+                    }
+                    break;
+            }
+        }
+
+        c = map[x][y].creature;
+        //check for creature change
+        if (c != null && c != player) {
+            monsters.remove(c);
+            c = new Creature(c.name, c.health, c.symbol, c.element.combine(e));
+            map[x][y].creature = c;
+            c.x = x;
+            c.y = y;
+            monsters.add(c);
+        }
+
+        //check for tree destruction
+        TerrainFeature tf = map[x][y].feature;
+        if (tf == TerrainFeature.TREE) {
+            if (e == Element.MAGMA || e == Element.ACID) {
+                map[x][y].feature = null;
+            } else if (e == Element.MANA) {
+                map[x][y].feature = TerrainFeature.BUSH;
+            } else if (e == Element.TAR) {
+                map[x][y].feature = TerrainFeature.STONE_WALL;
+            }
+        } else if (tf == TerrainFeature.BUSH) {
+            if (e == Element.MAGMA || e == Element.ACID || e == Element.AIR) {
+                map[x][y].feature = null;
+            } else if (e == Element.BLOOD || e == Element.WATER) {
+                map[x][y].feature = TerrainFeature.TREE;
+            } else if (e == Element.TAR || e == Element.SAND) {
+                map[x][y].feature = TerrainFeature.STONE_WALL;
+            }
+        } else if (tf == TerrainFeature.STONE_WALL) {
+            if (e == Element.ACID) {
+                map[x][y].feature = null;
+            } else if (e == Element.BLOOD) {
+                map[x][y].feature = TerrainFeature.BUSH;
+            } else if (e == Element.MANA) {
+                map[x][y].feature = TerrainFeature.TREE;
+            }
+        } else if (tf == null) {
+            if (e == Element.MANA) {
+                if (rng.nextDouble() < 0.05) {
+                    map[x][y].feature = TerrainFeature.TREE;
+                }
+            } else if (e == Element.WATER || e == Element.BLOOD) {
+                if (rng.nextDouble() < 0.05) {
+                    map[x][y].feature = TerrainFeature.BUSH;
+                }
+            } else if (e == Element.TAR || e == Element.SAND) {
+                if (rng.nextDouble() < 0.05) {
+                    map[x][y].feature = TerrainFeature.STONE_WALL;
+                }
+            }
+        }
+
+        c = map[x][y].creature;
+        tf = map[x][y].feature;
+        if (c == player) {
+            if (tf != null && tf.blocking) {
+                die("You are crushed by the sudden appearance of a " + tf.name);
+            } else if (map[x][y].terrain.blocking) {
+                die("You don't survive the sudden appearance of a " + map[x][y].terrain.name);
+            }
+        }
+
+    }
+
+    private void win() {
+        canClick = false;
+        if (winPane == null) {
+            winPane = new SparseLayers(gridWidth, gridHeight, cellWidth, cellHeight, textFactory);
+            SColor fade = SColor.DARK_GRAY;
+            SColor heading = SColor.RED_PIGMENT;
+            SColor command = SColor.SCHOOL_BUS_YELLOW;
+            float sc = SColor.translucentColor(fade.toFloatBits(), 0.6f);
+            for (int x = 0; x < winPane.gridWidth(); x++) {
+                winPane.put(x, 0, sc);
+                winPane.put(x, 1, sc);
+                winPane.put(x, winPane.gridHeight() - 1, sc);
+                winPane.put(x, winPane.gridHeight() - 2, sc);
+            }
+            for (int y = 0; y < winPane.gridHeight(); y++) {
+                winPane.put(0, y, sc);
+                winPane.put(1, y, sc);
+                winPane.put(winPane.gridWidth() - 1, y, sc);
+                winPane.put(winPane.gridWidth() - 2, y, sc);
+            }
+            sc = SColor.translucentColor(sc, 0.94f);
+            for (int x = 2; x < winPane.gridWidth() - 2; x++) {
+                for (int y = 2; y < winPane.gridHeight() - 2; y++) {
+                    winPane.put(x, y, sc);
+                }
+            }
+
+            String text;
+            int x;
+            int y = 3;
+            int left = 5;
+
+            text = "--  press right mouse to restart or left mouse to quit --";
+            x = (diePane.gridWidth() - text.length()) / 2;//centered
+            diePane.put(x, y, text, SColor.ELECTRIC_GREEN);
+            y += 2;
+
+            text = "Your peaceful life as a fisherman has come to an end.";
+            x = left;//left justified
+            winPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+            text = "Because you destroyed the elemental menace.";
+            x = left;//left justified
+            winPane.put(x, y, text, SColor.WHITE);
+            y += 2;
+            text = "Your fame and prowess are now legendary across the land! Your";
+            x = left;//left justified
+            winPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+            text = "nights are filled with the shouts and laughter of all your";
+            x = left;//left justified
+            winPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+            text = "friends and family.";
+            x = left;//left justified
+            winPane.put(x, y, text, SColor.WHITE);
+            y += 2;
+            text = "You live happily ever after.";
+            x = left;//left justified
+            winPane.put(x, y, text, SColor.WHITE);
+            y += 1;
+
+            text = "--  press right mouse to restart or left mouse to quit --";
+            x = (winPane.gridWidth() - text.length()) / 2;//centered
+            y = gridHeight - 3;
+            winPane.put(x, y, text, SColor.ELECTRIC_GREEN);
+            
+            final long readTime = System.currentTimeMillis() + 200;
+            
+            winPane.addListener(new ClickListener(){
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    super.clicked(event, x, y);
+                    if (System.currentTimeMillis() > readTime) {
+                        exiting();
+                    }
+
+                }
+            });
+        }
+        stage.addActor(winPane);
+    }
+
+    private void die(String reason) {
+        canClick = false;
+        if (diePane == null) {
+            diePane = new SparseLayers(gridWidth, gridHeight, cellWidth, cellHeight, textFactory);
+            SColor fade = SColor.DARK_GRAY;
+            SColor heading = SColor.RED_PIGMENT;
+            SColor command = SColor.SCHOOL_BUS_YELLOW;
+            float sc = SColor.translucentColor(fade.toFloatBits(), 0.6f);
+            for (int x = 0; x < diePane.gridWidth(); x++) {
+                diePane.put(x, 0, sc);
+                diePane.put(x, 1, sc);
+                diePane.put(x, diePane.gridHeight() - 1, sc);
+                diePane.put(x, diePane.gridHeight() - 2, sc);
+            }
+            for (int y = 0; y < diePane.gridHeight(); y++) {
+                diePane.put(0, y, sc);
+                diePane.put(1, y, sc);
+                diePane.put(diePane.gridWidth() - 1, y, sc);
+                diePane.put(diePane.gridWidth() - 2, y, sc);
+            }
+            sc = SColor.translucentColor(sc, 0.94f);
+            for (int x = 2; x < diePane.gridWidth() - 2; x++) {
+                for (int y = 2; y < diePane.gridHeight() - 2; y++) {
+                    diePane.put(x, y, sc);
+                }
+            }
+
+            String text;
+            int x;
+            int y = 3;
+            int left = 5;
+
+            text = "--  press right mouse to restart or left mouse to quit --";
+            x = (diePane.gridWidth() - text.length()) / 2;//centered
+            diePane.put(x, y, text, SColor.ELECTRIC_GREEN);
+            y += 2;
+
+            text = "Your peaceful life as a fisherman has come to an end.";
+            x = left;//left justified
+            diePane.put(x, y, text, SColor.WHITE);
+            y += 1;
+            text = "Because you died.";
+            x = left;//left justified
+            diePane.put(x, y, text, SColor.WHITE);
+            y += 2;
+            text = "It's lucky for you though, now you don't have to hear the";
+            x = left;//left justified
+            diePane.put(x, y, text, SColor.WHITE);
+            y += 1;
+            text = "screams of your friends and loved ones as they are torn apart";
+            x = left;//left justified
+            diePane.put(x, y, text, SColor.WHITE);
+            y += 1;
+            text = "by vicious elemental beings. You kinda don't mind Neumann dying though.";
+            x = left;//left justified
+            diePane.put(x, y, text, SColor.WHITE);
+            y += 3;
+
+            text = "Neumann stole your mail twice. That jerk. You died because:";
+            x = left;//left justified
+            diePane.put(x, y, text, SColor.WHITE);
+            y += 1;
+            x = left;//left justified
+            diePane.put(x, y, reason, SColor.SAFETY_ORANGE);
+            y += 1;
+
+            text = "--  press right mouse to restart or left mouse to quit --";
+            x = (diePane.gridWidth() - text.length()) / 2;//centered
+            y = gridHeight - 3;
+            diePane.put(x, y, text, SColor.ELECTRIC_GREEN);
+            
+            final long readTime = System.currentTimeMillis() + 200;
+            diePane.addListener(new ClickListener(){
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    super.clicked(event, x, y);
+                    if (System.currentTimeMillis() > readTime) {                         
+                        exiting();
+                    }
+
+                }
+            });
+        }
+        stage.addActor(diePane);
+    }
+
+    private void addFish(Fish fish) {
+        int n = fishInventory.get(fish.element).get(fish.size);
+        if (n < maxFish) {
+            printOut("Caught a " + fish.name + "!");
+            fishInventory.get(fish.element).put(fish.size, n + 1);
+            updateFishInventoryPanel();
+        } else {
+            printOut("No more room for " + fish.name + ".");
+        }
+    }
+
+    private void removeFish(Fish fish) {
+        int n = fishInventory.get(fish.element).get(fish.size);
+        if (n > 0) {
+//            if (n == 1) {
+//                printOut("That was your last " + fish.name + "!");
+            selectedFish = null;
+//            } else {
+//                printOut("Throwing a " + fish.name + ".");
+//            }
+            fishInventory.get(fish.element).put(fish.size, n - 1);
+            updateFishInventoryPanel();
+        } else {
+//            printOut("No more " + fish.name + " in your inventory.");
+        }
+    }
+
+    /**
+     * Attempts to move in the given direction. If a monster is in that direction then the player attacks the monster.
+     *
+     * Returns false if there was a wall in the direction and so no action was taken.
+     *
+     * @param dir
+     * @return
+     */
+    private boolean tryToMove(Direction dir) {
+        MapCell tile = map[player.x + dir.deltaX][player.y + dir.deltaY];
+        if (tile.isBlocking()) {
+            if (tile.terrain.lake) {
+                terrain = map[player.x][player.y].terrain;
+                element = tile.terrain.element;
+                goFish();
+            } else {
+                printOut("You can't walk through the " + (tile.feature != null && tile.feature.blocking ? tile.feature.name : tile.terrain.name) + ".");
+            }
+            return false;
+        }
+
+        Creature monster = tile.creature;
+        if (monster == null) {//move the player
+            map[player.x][player.y].creature = null;
+            player.x += dir.deltaX;
+            player.y += dir.deltaY;
+            map[player.x][player.y].creature = player;
+            return true;
+        } else if (monster != player) {
+            printOut("You have no way to directly hurt the " + monster.name + "!");
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Updates the map display to show the current view
+     */
+    private void updateMap() {
+        doFOV();
+        for (int x = 0; x < gridWidth; x++) {
+            for (int y = 0; y < gridHeight; y++) {
+                map[x][y].light = SColor.WHITE;
+                mapPanel.put(x, y, map[x][y].getSymbol().charAt(0), map[x][y].foregroundColor());
+            }
+        }
+
+        mapPanel.put(player.x, player.y, player.symbol.charAt(0));
+    }
+
+    private void updateFishInventoryPanel() {
+        int x = 1;//start off with a bit of padding
+//        fishInventoryPanel.removeHighlight();
+        for (Element e : Element.values()) {
+            int y = 1;
+            for (Size s : Size.values()) {
+                if (selectedFish != null && selectedFish.element == e && selectedFish.size == s) {
+//                    fishInventoryPanel.highlight(x, y, x + maxFish - 1, y);
+                }
+                int n = fishInventory.get(e).get(s);
+                for (int i = 0; i < maxFish; i++) {
+                    if (i < n) {
+                        fishInventoryPanel.put(x + i, y, Fish.symbol(s).charAt(0), e.color);
+                    } else {
+                        fishInventoryPanel.clear(x + i, y);
+                    }
+                }
+                y++;
+            }
+            x += maxFish + 1;
+        }
+
+        for (x = 0; x < maxHealth; x++) {
+            if (x < player.health) {
+                fishInventoryPanel.put(x + healthX, 2, bobber, SColor.BLOOD);
+            } else {
+                fishInventoryPanel.clear(x + healthX, 2);
+            }
+        }
+    }
+
+    private void updateOverlay() {
+        overlayPanel.clear();
+
+        Radius strat = Radius.CIRCLE;
+
+        if (selectedFish != null) {
+            int radius = 1;
+            Color c = selectedFish.color;
+            float cf = SColor.floatGet(c.r, c.g, c.b, overlayAlpha / 255f);
+            switch (selectedFish.size) {
+                case SMALL:
+                    radius = 2;
+                    break;
+                case MEDIUM:
+                    radius = 3;
+                    break;
+                case LARGE:
+                    radius = 5;
+                    break;
+                case GIANT:
+                    radius = 9;
+                    break;
+            }
+            for (int x = overlayLocation.x - radius; x <= overlayLocation.x + radius; x++) {
+                for (int y = overlayLocation.y - radius; y <= overlayLocation.y + radius; y++) {
+                    if (strat.radius(overlayLocation.x, overlayLocation.y, x, y) <= radius + 0.1) {
+                        overlayPanel.put(x, y, cf);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Sets the output panel to show the message.
+     *
+     * @param message
+     */
+    private void printOut(String message) {
+    }
+
+    /**
+     * Calculates the Field of View and marks the maps spots seen appropriately.
+     */
+    private void doFOV() {
+        double[][] walls = new double[gridWidth][gridHeight];
+        for (int x = 0; x < gridWidth; x++) {
+            for (int y = 0; y < gridHeight; y++) {
+                walls[x][y] = map[x][y].isOpaque() ? 1.0 : 0.0;
+            }
+        }
+        walls = fov.calculateFOV(walls, player.x, player.y, Math.min(gridWidth, gridHeight) / 3);
+        for (int x = 0; x < gridWidth; x++) {
+            for (int y = 0; y < gridHeight; y++) {
+                map[x][y].seen = walls[x][y] > 0.0;
+            }
+        }
+    }
+
+    private void createMap() {
+        map = new MapCell[gridWidth][gridHeight];
+        for (int x = 0; x < gridWidth; x++) {
+            for (int y = 0; y < gridHeight; y++) {
+                map[x][y] = new MapCell(Terrain.DIRT);
+                if (rng.nextDouble() < 0.1) {
+                    map[x][y].feature = TerrainFeature.TREE;
+                } else if (rng.nextDouble() < 0.105) {
+                    map[x][y].terrain = Terrain.makeElementalPool(Element.getRandomElement(rng));
+                    map[x][y].terrain.lake = true;
+                }
+            }
+        }
+
+        for (int i = 0; i < 20; i++) {
+            placeWallChunk(Terrain.GRASS, TerrainFeature.BUSH);
+        }
+        for (int i = 0; i < 20; i++) {
+            placeWallChunk(Terrain.GRASS, null);
+        }
+        for (int i = 0; i < 20; i++) {
+            placeWallChunk(Terrain.STONE, null);
+        }
+
+        String[] mapDrawing = new String[]{
+                "############..####",
+                "#....##..........#",
+                "#....##..........#",
+                "#.........####....",
+                "#.........####....",
+                "..........####...#",
+                "#................#",
+                "#####..###########"
+        };
+
+        int x = (gridWidth / 2) - 2;
+        int y = (gridHeight / 2) - 4;
+        for (String s : mapDrawing) {
+            for (char c : s.toCharArray()) {
+                switch (c) {
+                    case '#':
+                        map[x][y] = new MapCell(Terrain.STONE, TerrainFeature.STONE_WALL);
+                        break;
+                    case '.':
+                        map[x][y] = new MapCell(Terrain.STONE);
+                        break;
+                }
+                x++;
+            }
+            y++;
+            x = (gridWidth / 2) - 2;
+        }
+
+        for (int i = 0; i < 20; i++) {
+            Creature creature = Creature.getRandomMonster();
+            placeMonster(creature);
+            monsters.add(creature);
+        }
+
+        player.x = gridWidth / 2;
+        player.y = gridHeight / 2;
+        MapCell cell = map[player.x][player.y];
+        cell.creature = player;
+        cell.terrain = Terrain.DIRT;
+        cell.feature = null;
+        cell.item = null;
+    }
+
+    /**
+     * Randomly places a group of walls in the map. This replaces whatever was in that location previously.
+     */
+    private void placeWallChunk(Terrain t, TerrainFeature tf) {
+        int spread = 5;
+        int centerX = rng.nextInt(gridWidth);
+        int centerY = rng.nextInt(gridHeight);
+
+        for (int placeX = centerX - spread; placeX < centerX + spread; placeX++) {
+            for (int placeY = centerY - spread; placeY < centerY + spread; placeY++) {
+                if (rng.nextDouble() < 0.2 && placeX > 0 && placeX < gridWidth - 1 && placeY > 0 && placeY < gridHeight - 1) {
+                    map[placeX][placeY] = new MapCell(t, tf);
+                }
+            }
+        }
+    }
+
+    /**
+     * Places the provided monster into an open tile space.
+     *
+     * @param monster
+     */
+    private void placeMonster(Creature monster) {
+        int x;
+        int y;
+        do {
+
+            x = rng.nextInt(gridWidth - 2) + 1;
+            y = rng.nextInt(gridHeight - 2) + 1;
+        } while (map[x][y].isBlocking() || map[x][y].creature != null || (x > gridWidth * 0.3 && x < gridWidth * 0.6 && y > gridHeight * 0.3 && y < gridHeight * 0.6));
+
+        map[x][y].creature = monster;
+        monster.x = x;
+        monster.y = y;
+    }
+
+    public Coord getClosestWaypoint(Coord from, Coord to) {
+        Coord[] line = Bresenham.line2D_(from, to);
+        if (line.length < 2) {
+            return null;
+        }
+        return line[1];
+    }
+
+    /**
+     * Moves the monster given if possible. Monsters will not move into walls, other monsters, or the player.
+     *
+     * @param monster
+     */
+    private void moveMonster(Creature monster) {
+//        Direction dir = Direction.CARDINALS[rng.nextInt(Direction.CARDINALS.length)];//get a random direction
+        Coord p = getClosestWaypoint(Coord.get(monster.x, monster.y), Coord.get(player.x, player.y));
+        Direction dir;
+        dir = rng.getRandomElement(Direction.OUTWARDS);
+        if (p != null) {
+            dir = Direction.getDirection(p.x - monster.x, p.y - monster.y);
+            if (map[p.x][p.y].isBlocking()) {
+                dir = rng.getRandomElement(Direction.OUTWARDS);
+            }
+        }
+        if (monster.x + dir.deltaX < 0 || monster.x + dir.deltaX >= gridWidth || monster.y + dir.deltaY < 0 || monster.y + dir.deltaY >= gridHeight) {
+            return;//trying to leave map so do nothing
+        }
+
+        MapCell tile = map[monster.x + dir.deltaX][monster.y + dir.deltaY];
+        if (!tile.isBlocking() && tile.creature == null) {
+            map[monster.x][monster.y].creature = null;
+            monster.x += dir.deltaX;
+            monster.y += dir.deltaY;
+            map[monster.x][monster.y].creature = monster;
+        } else if (tile.creature == player) {
+            hurtPlayer(monster.name);
+        }
+
+        if (nowFishing) {
+            for (Direction d : Direction.CARDINALS) {
+                if (d.deltaX + monster.x >= 0 & d.deltaX + monster.x < gridWidth && d.deltaY + monster.y >= 0 && d.deltaY + monster.y < gridHeight) {
+                    if (d.deltaX + monster.x == player.x && d.deltaY + monster.y == player.y) {
+                        printOut("A monster is next to you!   Right-click to stop fishing.");
+                    }
+                }
+            }
+        }
+    }
+
+    private void hurtPlayer(String cause) {
+        player.health--;
+        printOut("The " + cause + " hurt you!  You have " + player.health + " health now.");
+        if (player.health <= 0) {
+            die("The " + cause + " finished you off.");
+        }
+        updateFishInventoryPanel();
+    }
+
+    private void checkForReactions() {
+
+    }
+
+    /**
+     * Moves all the monsters, one at a time.
+     */
+    private void moveAllMonsters() {
+        for (Creature monster : monsters) {
+            moveMonster(monster);
+        }
+    }
+
 }
-// An explanation of hexadecimal float/double literals was mentioned earlier, so here it is.
-// The literal 0x1p-9f is a good example; it is essentially the same as writing 0.001953125f,
-// (float)Math.pow(2.0, -9.0), or (1f / 512f), but is possibly faster than the last two if the
-// compiler can't optimize float division effectively, and is a good tool to have because these
-// hexadecimal float or double literals always represent numbers accurately. To contrast,
-// 0.3 - 0.2 is not equal to 0.1 with doubles, because tenths are inaccurate with floats and
-// doubles, and hex literals won't have the option to write an inaccurate float or double.
-// There's some slightly confusing syntax used to write these literals; the 0x means the first
-// part uses hex digits (0123456789ABCDEF), but the p is not a hex digit and is used to start
-// the "p is for power" exponent section. In the example, I used -9 for the power; this is a
-// base 10 number, and is used to mean a power of 2 that the hex digits will be multiplied by.
-// Because the -9 is a base 10 number, the f at the end is not a hex digit, and actually just
-// means the literal is a float, in the same way 1.5f is a float. 2.0 to the -9 is the same as
-// 1.0 / Math.pow(2.0, 9.0), but re-calculating Math.pow() is considerably slower if you run it
-// for every cell during every frame. Though this is most useful for negative exponents because
-// there are a lot of numbers after the decimal point to write out with 0.001953125 or the like,
-// it is also sometimes handy when you have an integer or long written in hexadecimal and want
-// to make it a float or double. You could use the hex long 0x9E3779B9L, for instance, but to
-// write that as a double you would use 0x9E3779B9p0 , not the invalid syntax 0x9E3779B9.0 .
-// We use p0 there because 2 to the 0 is 1, so multiplying by 1 gets us the same hex number.
-// Very large numbers can also benefit by using a large positive exponent; using p10 and p+10
-// as the last part of a hex literal are equivalent. You can see the hex literal for any given
-// float with Float.toHexString(float), or for a double with Double.toHexString(double) .
-// SColor provides the packed float versions of all color constants as hex literals in the
-// documentation for each SColor.
-// More information here: https://blogs.oracle.com/darcy/hexadecimal-floating-point-literals
