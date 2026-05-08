@@ -1,78 +1,68 @@
 # Assault Fish
 
-Assault Fish is a tactical roguelike where you survive an elemental invasion by doing what you do best: fishing.
+<p align="center"><strong>A tactical roguelike where fishing is your weapon.</strong></p>
 
-Catch explosive elemental fish from magical pools, then throw them to transform terrain, trigger reactions, and eliminate monsters.
+<p align="center">
+Catch elemental fish from magic pools, then throw them to reshape terrain, trigger reactions, and wipe out monsters that you cannot fight head-on.
+</p>
 
-![Assault Fish gameplay screenshot](screenshots/assaultfish-20260508-065534.png)
+<table>
+	<tr>
+		<td><img src="screenshots/assaultfish-20260508-065534.png" alt="Dungeon exploration in Assault Fish"></td>
+		<td><img src="screenshots/assaultfish-20260508-071015.png" alt="Fishing minigame in Assault Fish"></td>
+	</tr>
+	<tr>
+		<td><em>Explore the map, manage positioning, and set up elemental attacks.</em></td>
+		<td><em>Cast into pools to catch the fish that power every attack.</em></td>
+	</tr>
+</table>
 
-## What This Game Is
+## Why It Stands Out
 
-- A turn-based grid roguelike with elemental interactions.
-- You cannot directly damage enemies in melee.
-- Your primary weapon is fish you catch, select, and throw.
-- Different fish sizes create different blast radii.
+- Turn-based roguelike tactics with elemental chain reactions.
+- No direct melee damage; fish are your entire combat system.
+- Fishing and combat are tightly linked, so every pool matters.
+- Different fish sizes change blast radius and tactical reach.
 
-## How to Play
-
-### Goal
+## How To Play
 
 Defeat every elemental monster on the map.
 
-### Core Loop
-
-1. Move around the map and find elemental pools.
-2. Step into a pool to enter fishing mode.
-3. Time your cast to catch fish.
-4. Select fish from your inventory.
-5. Throw fish to alter terrain and destroy enemies via elemental counters.
+1. Explore until you find an elemental pool.
+2. Fish to stock up on throwable elemental ammo.
+3. Pick the right fish for the terrain and enemy type.
+4. Throw carefully to trigger the reactions you want.
 
 ## Controls
 
-### Map
-
 - Move: Arrow keys, `WASD`, or `HJKL`
-- Inspect tile: Ctrl + Left Click (or Middle Click)
-- Select fish target / move: Left Click
-- Deselect fish: Right Click
+- Move / target fish throw: Left Click
+- Cancel selection / stop fishing: Right Click
+- Inspect tile: Ctrl + Left Click or Middle Click
+- Help: `H`
+- Exit: `ESC`
+- Screenshot: `P`
 
-### Fishing
+## Run
 
-- Start cast meter: Left Click
-- Release cast: Left Click
-- Stop fishing: Right Click
-
-### UI / System
-
-- Help: `H` or `HELP` button
-- Toggle music: `MUTE` button
-- Exit: `ESC` or `EXIT` button
-- Screenshot: `P` (saved to `screenshots/`)
-
-## Run Locally
-
-### Requirements
-
-- Java 25+
-
-### Quick start
+Requires Java 25+.
 
 ```bash
 ./gradlew lwjgl3:run
 ```
 
-### Build desktop jar
+Build the desktop jar:
 
 ```bash
 ./gradlew lwjgl3:build
 java -jar lwjgl3/build/libs/AssaultFish-2.0.0.jar
 ```
 
-## Project Notes
+Optional HTML/GWT target:
 
-- Desktop launcher: `com.squidpony.assaultfish.lwjgl3.Lwjgl3Launcher`
-- Core gameplay code: `core/src/main/java/com/squidpony/assaultfish/AssaultFish.java`
-- Legacy HTML/GWT target is optional: enable with `-PincludeHtml=true`
+```bash
+./gradlew html:dist -PincludeHtml=true
+```
 
 ## License
 
