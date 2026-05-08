@@ -1,10 +1,8 @@
 package assaultfish.physical;
 
-import squidpony.squidgrid.gui.gdx.SColor;
-import squidpony.squidmath.IRNG;
-import squidpony.squidmath.OrderedMap;
-
 import java.util.HashMap;
+import squidpony.squidcolor.SColor;
+import squidpony.squidmath.RNG;
 
 /**
  * The types of base elements in the world.
@@ -24,8 +22,7 @@ public enum Element {
 
     public final String name, adjective, presentVerb, pastVerb;
     public final SColor color;
-    public final float floatColor;
-    private static final OrderedMap<Element, HashMap<Element, Element>> transform = new OrderedMap<>();
+    private static final HashMap<Element, HashMap<Element, Element>> transform = new HashMap<>();
 
     static {
         HashMap<Element, Element> hm;
@@ -133,7 +130,6 @@ public enum Element {
         this.presentVerb = presentVerb;
         this.pastVerb = pastVerb;
         this.color = color;
-        floatColor = color.toFloatBits();
     }
 
     public Element combine(Element other) {
@@ -145,8 +141,8 @@ public enum Element {
      *
      * @return
      */
-    public static Element getRandomElement(IRNG rng) {
-        return transform.randomKey(rng);
+    public static Element getRandomElement() {
+        return new RNG().getRandomElement(new Element[]{WATER, AIR, ACID, TAR, SAND, MAGMA, MANA, BLOOD});
     }
 
 }

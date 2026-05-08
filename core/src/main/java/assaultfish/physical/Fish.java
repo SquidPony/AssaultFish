@@ -1,10 +1,10 @@
 package assaultfish.physical;
 
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import squidpony.squidmath.GWTRNG;
-
+import java.awt.Font;
 import java.util.ArrayList;
+import squidpony.squidcolor.SColorFactory;
+import squidpony.squidmath.RNG;
+import squidpony.squidutility.SCollections;
 
 /**
  *
@@ -43,7 +43,7 @@ public class Fish extends Item {
                 symbol = giant;
                 break;
         }
-        color = element.color.cpy().lerp(Color.WHITE, 0.2f);
+        color = SColorFactory.lighter(element.color);
     }
 
     public static String symbol(Size size) {
@@ -68,67 +68,66 @@ public class Fish extends Item {
      *
      * @param font
      */
-    public static void initSymbols(BitmapFont font) {
+    public static void initSymbols(Font font) {
         ArrayList<String> symbols = new ArrayList<>();
-        StringBuilder symbolChoices = new StringBuilder();
-        BitmapFont.BitmapFontData data = font.getData();
+        String symbolChoices = "";
         for (char c : group1.toCharArray()) {
-            if (data.hasGlyph(c)) {
-                symbolChoices.append(c);
+            if (font.canDisplay(c)) {
+                symbolChoices += c;
             }
         }
-        if ("".equals(symbolChoices.toString())) {
-            symbolChoices = new StringBuilder("f");
+        if ("".equals(symbolChoices)) {
+            symbolChoices = "f";
         }
-        symbols.add(symbolChoices.toString());
+        symbols.add(symbolChoices);
 
-        symbolChoices.setLength(0);
+        symbolChoices = "";
         for (char c : group2.toCharArray()) {
-            if (data.hasGlyph(c)) {
-                symbolChoices.append(c);
+            if (font.canDisplay(c)) {
+                symbolChoices += c;
             }
         }
-        if ("".equals(symbolChoices.toString())) {
-            symbolChoices = new StringBuilder("i");
+        if ("".equals(symbolChoices)) {
+            symbolChoices = "i";
         }
-        symbols.add(symbolChoices.toString());
+        symbols.add(symbolChoices);
 
-        symbolChoices.setLength(0);
+        symbolChoices = "";
         for (char c : group3.toCharArray()) {
-            if (data.hasGlyph(c)) {
-                symbolChoices.append(c);
+            if (font.canDisplay(c)) {
+                symbolChoices += c;
             }
         }
-        if ("".equals(symbolChoices.toString())) {
-            symbolChoices = new StringBuilder("s");
+        if ("".equals(symbolChoices)) {
+            symbolChoices = "s";
         }
-        symbols.add(symbolChoices.toString());
+        symbols.add(symbolChoices);
 
-        symbolChoices.setLength(0);
+        symbolChoices = "";
         for (char c : group4.toCharArray()) {
-            if (data.hasGlyph(c)) {
-                symbolChoices.append(c);
+            if (font.canDisplay(c)) {
+                symbolChoices += c;
             }
         }
-        if ("".equals(symbolChoices.toString())) {
-            symbolChoices = new StringBuilder("h");
+        if ("".equals(symbolChoices)) {
+            symbolChoices = "h";
         }
-        symbols.add(symbolChoices.toString());
+        symbols.add(symbolChoices);
 
-        GWTRNG rng = new GWTRNG();
-        String s = rng.getRandomElement(symbols);
+        RNG rng = new RNG();
+        String s = SCollections.getRandomElement(symbols);
         symbols.remove(s);
         small = "" + s.charAt(rng.nextInt(s.length()));
 
-        s = rng.getRandomElement(symbols);
+        s = SCollections.getRandomElement(symbols);
         symbols.remove(s);
         medium = "" + s.charAt(rng.nextInt(s.length()));
 
-        s = rng.getRandomElement(symbols);
+        s = SCollections.getRandomElement(symbols);
         symbols.remove(s);
         large = "" + s.charAt(rng.nextInt(s.length()));
 
-        s = rng.getRandomElement(symbols);
+        s = SCollections.getRandomElement(symbols);
         symbols.remove(s);
         giant = "" + s.charAt(rng.nextInt(s.length()));
     }

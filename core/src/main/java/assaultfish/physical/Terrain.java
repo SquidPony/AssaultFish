@@ -1,7 +1,6 @@
 package assaultfish.physical;
 
-import com.badlogic.gdx.graphics.Color;
-import squidpony.squidgrid.gui.gdx.SColor;
+import squidpony.squidcolor.SColor;
 
 /**
  * Terrain is the base of the map.
@@ -16,15 +15,15 @@ public class Terrain {
 
     public String name;
     public String symbol;
-    public float color;
+    public SColor color;
     public Element element = null;
     public boolean blocking = false;
     public boolean lake = false;
 
-    public Terrain(String name, String symbol, Color color, boolean blocking) {
+    public Terrain(String name, String symbol, SColor color, boolean blocking) {
         this.name = name;
         this.symbol = symbol;
-        this.color = color.toFloatBits();
+        this.color = color;
         this.blocking = blocking;
     }
 
@@ -33,7 +32,7 @@ public class Terrain {
         this.symbol = symbol;
         this.element = element;
         this.blocking = blocking;
-        color = element.color.toFloatBits();
+        color = element.color;
     }
 
     public Terrain(Terrain other) {
