@@ -1,7 +1,53 @@
-*.class
+## Gradle
+.gradle/
+gradle-app.setting
+build/
 
-# Package Files #
+## Java
+*.class
 *.war
 *.ear
-nbproject/private/
-build/
+hs_err_pid*
+
+## GWT
+war/
+html/war/gwt_bree/
+html/gwt-unitCache/
+.apt_generated/
+html/war/WEB-INF/deploy/
+html/war/WEB-INF/classes/
+.gwt/
+gwt-unitCache/
+www-test/
+.gwt-tmp/
+
+## IDEs
+.idea/
+*.ipr
+*.iws
+*.iml
+out/
+.classpath
+.project
+.metadata
+**/bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+.settings/
+.loadpath
+.externalToolBuilders/
+*.launch
+
+## NetBeans
+**/nbproject/private/
+nbbuild/
+dist/
+nbdist/
+nbactions.xml
+nb-configuration.xml
+
+## OS
+.DS_Store

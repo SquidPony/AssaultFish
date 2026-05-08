@@ -1,0 +1,15 @@
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+eclipse.project.name = appName + '-core'
+
+sourceSets {
+  main {
+    java {
+      exclude 'com/squidpony/assaultfish/AssaultFish.java'
+    }
+  }
+}
+
+dependencies {
+  implementation files(rootProject.file('AssaultFish 1.7/lib/SquidLib.jar'))
+}
+        

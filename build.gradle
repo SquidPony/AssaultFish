@@ -1,0 +1,58 @@
+buildscript {
+  repositories {
+    mavenCentral()
+    gradlePluginPortal()
+  }
+  dependencies {
+    classpath "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
+  }
+}
+
+allprojects {
+  apply plugin: 'eclipse'
+  apply plugin: 'idea'
+}
+
+configure(subprojects) {
+  apply plugin: 'java'
+
+  java {
+    toolchain {
+      languageVersion = JavaLanguageVersion.of(25)
+    }
+  }
+
+  tasks.withType(JavaCompile).configureEach {
+    options.release = 25
+    options.fork = true
+    options.incremental = true
+  }
+}
+
+subprojects { 
+  version = '2.0.0'
+  ext.appName = 'AssaultFish'
+  repositories {
+    mavenCentral()
+    maven { url = uri('https://jitpack.io') }
+  }
+
+  configurations.configureEach {
+    resolutionStrategy {
+      failOnVersionConflict()
+      failOnDynamicVersions()
+      failOnChangingVersions()
+      force "com.badlogicgames.gdx:gdx:$gdxVersion"
+      force "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+      force "com.badlogicgames.gdx:gdx-backend-gwt:$gdxVersion"
+      force "com.badlogicgames.gdx:gdx-platform:$gdxVersion"
+    }
+  }
+}
+
+// Clearing Eclipse project data in root folder:
+tasks.eclipse.doLast {
+  delete '.project'
+  delete '.classpath'
+  delete '.settings/'
+}
