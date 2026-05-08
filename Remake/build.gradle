@@ -1,13 +1,10 @@
 buildscript {
   repositories {
-    mavenLocal()
     mavenCentral()
-    jcenter()
-    maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
+    gradlePluginPortal()
   }
   dependencies {
     classpath "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
-    classpath "de.richsource.gradle.plugins:gwt-gradle-plugin:$gwtPluginVersion"
   }
 }
 
@@ -18,23 +15,38 @@ allprojects {
 
 configure(subprojects) {
   apply plugin: 'java'
-  sourceCompatibility = 1.7
-  compileJava {
+
+  java {
+    toolchain {
+      languageVersion = JavaLanguageVersion.of(25)
+    }
+  }
+
+  tasks.withType(JavaCompile).configureEach {
+    options.release = 25
     options.fork = true
     options.incremental = true
   }
 }
 
 subprojects { 
-  version = '2.0.0-SNAPSHOT'
+  version = '2.0.0'
   ext.appName = 'AssaultFish'
   repositories {
     mavenCentral()
-    jcenter()
-    maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
-    maven { url 'https://jitpack.io' }
-    mavenLocal()
+    maven { url = uri('https://jitpack.io') }
+  }
 
+  configurations.configureEach {
+    resolutionStrategy {
+      failOnVersionConflict()
+      failOnDynamicVersions()
+      failOnChangingVersions()
+      force "com.badlogicgames.gdx:gdx:$gdxVersion"
+      force "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+      force "com.badlogicgames.gdx:gdx-backend-gwt:$gdxVersion"
+      force "com.badlogicgames.gdx:gdx-platform:$gdxVersion"
+    }
   }
 }
 

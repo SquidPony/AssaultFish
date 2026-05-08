@@ -1,1 +1,5 @@
-include 'core', 'lwjgl3', 'html'
+include 'core', 'lwjgl3'
+
+if (providers.gradleProperty('includeHtml').isPresent()) {
+	include 'html'
+}
