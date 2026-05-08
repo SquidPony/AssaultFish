@@ -558,6 +558,36 @@ public class AssaultFish {
         System.exit(0);
     }
 
+    private void takeScreenshot() {
+        try {
+            // Create screenshots directory if it doesn't exist
+            File screenshotsDir = new File("screenshots");
+            if (!screenshotsDir.exists()) {
+                screenshotsDir.mkdirs();
+            }
+
+            // Generate filename with timestamp
+            long timestamp = System.currentTimeMillis();
+            File screenshotFile = new File(screenshotsDir, "screenshot_" + timestamp + ".png");
+
+            // Capture the layers (which contains all visible panels)
+            java.awt.image.BufferedImage image = new java.awt.image.BufferedImage(
+                    layers.getWidth(),
+                    layers.getHeight(),
+                    java.awt.image.BufferedImage.TYPE_INT_RGB);
+
+            java.awt.Graphics2D g2d = image.createGraphics();
+            layers.paintAll(g2d);
+            g2d.dispose();
+
+            // Save the image
+            ImageIO.write(image, "png", screenshotFile);
+            printOut("Screenshot saved to " + screenshotFile.getAbsolutePath());
+        } catch (IOException ex) {
+            printOut("Failed to save screenshot: " + ex.getMessage());
+        }
+    }
+
     private void throwFish(int targetX, int targetY) {
         if (selectedFish == null) {
             return;
@@ -1709,6 +1739,12 @@ public class AssaultFish {
 
         @Override
         public void keyPressed(KeyEvent e) {
+            // Check for screenshot key first
+            if (e.getKeyCode() == KeyEvent.VK_P) {
+                takeScreenshot();
+                return;
+            }
+
             if (canClick) {
                 canClick = false;
                 DirectionIntercardinal d = getDirectionFromKey(e.getExtendedKeyCode());

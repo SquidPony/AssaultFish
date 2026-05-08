@@ -34,7 +34,6 @@ subprojects {
   ext.appName = 'AssaultFish'
   repositories {
     mavenCentral()
-    maven { url = uri('https://jitpack.io') }
   }
 
   configurations.configureEach {
@@ -46,6 +45,7 @@ subprojects {
       force "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
       force "com.badlogicgames.gdx:gdx-backend-gwt:$gdxVersion"
       force "com.badlogicgames.gdx:gdx-platform:$gdxVersion"
+      force "com.github.tommyettinger:regexodus:$regExodusVersion"
     }
   }
 }

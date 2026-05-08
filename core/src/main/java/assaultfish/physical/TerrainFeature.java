@@ -1,6 +1,7 @@
 package assaultfish.physical;
 
-import squidpony.squidcolor.SColor;
+import com.badlogic.gdx.graphics.Color;
+import squidpony.squidgrid.gui.gdx.SColor;
 
 /**
  * Represents something that can sit in a map space but is not the terrain itself, a monster, or an
@@ -24,7 +25,7 @@ public class TerrainFeature extends Item {
         this.opaque = opaque;
     }
 
-    public TerrainFeature(String name, String symbol, SColor color, boolean blocking, boolean opaque) {
+    public TerrainFeature(String name, String symbol, Color color, boolean blocking, boolean opaque) {
         super(name, symbol, color);
         this.blocking = blocking;
         this.opaque = opaque;

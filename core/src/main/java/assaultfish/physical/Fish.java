@@ -1,16 +1,18 @@
 package assaultfish.physical;
 
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import java.awt.Font;
 import java.util.ArrayList;
-import squidpony.squidcolor.SColorFactory;
+import squidpony.squidgrid.gui.gdx.SquidColorCenter;
 import squidpony.squidmath.RNG;
-import squidpony.squidutility.SCollections;
 
 /**
  *
  * @author Eben Howard - http://squidpony.com - howard@squidpony.com
  */
 public class Fish extends Item {
+
+    private static final SquidColorCenter COLORS = new SquidColorCenter();
 
     public static final String fishSymbols = "ᾷᾶᾴᾳᾲᾱᾰάὰᾇᾆᾅᾄᾃᾂᾁᾀἇἆἅἄἃἂἁἀαά",
             group1 = "ᾷᾴᾲᾅᾄᾃᾂᾁᾀ",
@@ -43,7 +45,7 @@ public class Fish extends Item {
                 symbol = giant;
                 break;
         }
-        color = SColorFactory.lighter(element.color);
+        color = COLORS.lighter(element.color);
     }
 
     public static String symbol(Size size) {
@@ -115,19 +117,83 @@ public class Fish extends Item {
         symbols.add(symbolChoices);
 
         RNG rng = new RNG();
-        String s = SCollections.getRandomElement(symbols);
+        String s = rng.getRandomElement(symbols.toArray(new String[0]));
         symbols.remove(s);
         small = "" + s.charAt(rng.nextInt(s.length()));
 
-        s = SCollections.getRandomElement(symbols);
+        s = rng.getRandomElement(symbols.toArray(new String[0]));
         symbols.remove(s);
         medium = "" + s.charAt(rng.nextInt(s.length()));
 
-        s = SCollections.getRandomElement(symbols);
+        s = rng.getRandomElement(symbols.toArray(new String[0]));
         symbols.remove(s);
         large = "" + s.charAt(rng.nextInt(s.length()));
 
-        s = SCollections.getRandomElement(symbols);
+        s = rng.getRandomElement(symbols.toArray(new String[0]));
+        symbols.remove(s);
+        giant = "" + s.charAt(rng.nextInt(s.length()));
+    }
+
+    public static void initSymbols(BitmapFont font) {
+        ArrayList<String> symbols = new ArrayList<>();
+        String symbolChoices = "";
+        for (char c : group1.toCharArray()) {
+            if (font.getData().hasGlyph(c)) {
+                symbolChoices += c;
+            }
+        }
+        if (symbolChoices.isEmpty()) {
+            symbolChoices = "f";
+        }
+        symbols.add(symbolChoices);
+
+        symbolChoices = "";
+        for (char c : group2.toCharArray()) {
+            if (font.getData().hasGlyph(c)) {
+                symbolChoices += c;
+            }
+        }
+        if (symbolChoices.isEmpty()) {
+            symbolChoices = "i";
+        }
+        symbols.add(symbolChoices);
+
+        symbolChoices = "";
+        for (char c : group3.toCharArray()) {
+            if (font.getData().hasGlyph(c)) {
+                symbolChoices += c;
+            }
+        }
+        if (symbolChoices.isEmpty()) {
+            symbolChoices = "s";
+        }
+        symbols.add(symbolChoices);
+
+        symbolChoices = "";
+        for (char c : group4.toCharArray()) {
+            if (font.getData().hasGlyph(c)) {
+                symbolChoices += c;
+            }
+        }
+        if (symbolChoices.isEmpty()) {
+            symbolChoices = "h";
+        }
+        symbols.add(symbolChoices);
+
+        RNG rng = new RNG();
+        String s = rng.getRandomElement(symbols.toArray(new String[0]));
+        symbols.remove(s);
+        small = "" + s.charAt(rng.nextInt(s.length()));
+
+        s = rng.getRandomElement(symbols.toArray(new String[0]));
+        symbols.remove(s);
+        medium = "" + s.charAt(rng.nextInt(s.length()));
+
+        s = rng.getRandomElement(symbols.toArray(new String[0]));
+        symbols.remove(s);
+        large = "" + s.charAt(rng.nextInt(s.length()));
+
+        s = rng.getRandomElement(symbols.toArray(new String[0]));
         symbols.remove(s);
         giant = "" + s.charAt(rng.nextInt(s.length()));
     }

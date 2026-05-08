@@ -4,12 +4,15 @@ eclipse.project.name = appName + '-core'
 sourceSets {
   main {
     java {
-      exclude 'com/squidpony/assaultfish/AssaultFish.java'
+      exclude 'assaultfish/AssaultFish.java'
     }
   }
 }
 
 dependencies {
-  implementation files(rootProject.file('AssaultFish 1.7/lib/SquidLib.jar'))
+  implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
+  implementation "com.squidpony:squidlib:$squidLibVersion"
+  implementation "com.squidpony:squidlib-util:$squidLibUtilVersion"
+  implementation "com.github.tommyettinger:regexodus:$regExodusVersion"
 }
         

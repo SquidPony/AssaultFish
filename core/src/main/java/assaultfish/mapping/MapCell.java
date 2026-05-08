@@ -1,12 +1,13 @@
 package assaultfish.mapping;
 
+import com.badlogic.gdx.graphics.Color;
 import assaultfish.physical.Item;
 import assaultfish.physical.Creature;
 import assaultfish.physical.Element;
 import assaultfish.physical.Terrain;
 import assaultfish.physical.TerrainFeature;
-import squidpony.squidcolor.SColor;
-import squidpony.squidcolor.SColorFactory;
+import squidpony.squidgrid.gui.gdx.SColor;
+import squidpony.squidgrid.gui.gdx.SquidColorCenter;
 
 /**
  * Represents a single square in the game world.
@@ -15,11 +16,13 @@ import squidpony.squidcolor.SColorFactory;
  */
 public class MapCell {
 
+    private static final SquidColorCenter COLORS = new SquidColorCenter();
+
     public Creature creature;
     public Terrain terrain;
     public TerrainFeature feature;
     public Item item;
-    public SColor light = SColor.BLACK;
+    public Color light = SColor.BLACK;
     public boolean seen = false;
 
     public MapCell() {
@@ -34,12 +37,12 @@ public class MapCell {
         this.feature = feature;
     }
 
-    public SColor backgroundColor() {
+    public Color backgroundColor() {
         if (seen) {
             if (light.equals(SColor.BLACK) || terrain.element != null) {
-                return SColorFactory.dimmest(SColor.BLACK_DYE);
+                return COLORS.dimmest(SColor.BLACK_DYE);
             } else {
-                return SColorFactory.dimmest(terrain.color);
+                return COLORS.dimmest(terrain.color);
             }
         } else {
             return SColor.BLACK;
@@ -71,14 +74,14 @@ public class MapCell {
 //        }
     }
 
-    public SColor foregroundColor() {
+    public Color foregroundColor() {
         if (seen) {//previously seen
             //unlit
             if (light.equals(SColor.BLACK)) {
-                return SColorFactory.blend(SColorFactory.desaturated(creature != null ? creature.color : item != null ? item.color : feature != null ? feature.color : SColor.TRANSPARENT), SColor.BLACK, 0.75f);
+                return COLORS.lerp(COLORS.desaturated(creature != null ? creature.color : item != null ? item.color : feature != null ? feature.color : SColor.TRANSPARENT), SColor.BLACK, 0.75f);
             }
             //lit
-            return SColorFactory.lightWith(creature != null ? creature.color : item != null ? item.color : feature != null ? feature.color : terrain.color, light);
+            return COLORS.lightWith(creature != null ? creature.color : item != null ? item.color : feature != null ? feature.color : terrain.color, light);
         }
 
         return SColor.TRANSPARENT;//nothing to see
