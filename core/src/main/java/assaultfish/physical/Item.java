@@ -1,6 +1,7 @@
 package assaultfish.physical;
 
-import squidpony.squidcolor.SColor;
+import com.badlogic.gdx.graphics.Color;
+import squidpony.squidgrid.gui.gdx.SColor;
 
 /**
  * An Item is something that can exist in the game world.
@@ -12,7 +13,7 @@ public class Item {
     public String name;
     public String symbol;
     public Element element;
-    public SColor color;
+    public Color color;
     public int x, y;
 
     public Item() {
@@ -40,7 +41,7 @@ public class Item {
      * @param symbol
      * @param color
      */
-    public Item(String name, String symbol, SColor color) {
+    public Item(String name, String symbol, Color color) {
         this.name = (element == null ? "" : element.adjective + " ") + name;
         this.symbol = symbol;
         this.color = color;

@@ -1,6 +1,7 @@
 package assaultfish.physical;
 
-import squidpony.squidcolor.SColor;
+import com.badlogic.gdx.graphics.Color;
+import squidpony.squidgrid.gui.gdx.SColor;
 
 /**
  * This class represents some item of treasure found in the game.
@@ -23,7 +24,7 @@ public class Treasure extends Item implements Comparable<Treasure> {
      * @param value
      * @param color
      */
-    public Treasure(String name, int value, SColor color) {
+    public Treasure(String name, int value, Color color) {
         super(name, "$", color);
         this.value = value;
     }

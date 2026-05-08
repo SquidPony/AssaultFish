@@ -1,7 +1,8 @@
 package assaultfish.physical;
 
+import com.badlogic.gdx.graphics.Color;
 import java.util.HashMap;
-import squidpony.squidcolor.SColor;
+import squidpony.squidgrid.gui.gdx.SColor;
 import squidpony.squidmath.RNG;
 
 /**
@@ -21,7 +22,7 @@ public enum Element {
     MANA("mana", "mystical", "enchants", "enchanted", SColor.ROYAL_PURPLE);
 
     public final String name, adjective, presentVerb, pastVerb;
-    public final SColor color;
+    public final Color color;
     private static final HashMap<Element, HashMap<Element, Element>> transform = new HashMap<>();
 
     static {
@@ -124,7 +125,7 @@ public enum Element {
         transform.put(MANA, hm);
     }
 
-    private Element(String name, String adjective, String presentVerb, String pastVerb, SColor color) {
+    private Element(String name, String adjective, String presentVerb, String pastVerb, Color color) {
         this.name = name;
         this.adjective = adjective;
         this.presentVerb = presentVerb;
@@ -143,6 +144,10 @@ public enum Element {
      */
     public static Element getRandomElement() {
         return new RNG().getRandomElement(new Element[]{WATER, AIR, ACID, TAR, SAND, MAGMA, MANA, BLOOD});
+    }
+
+    public static Element getRandomElement(RNG rng) {
+        return rng.getRandomElement(new Element[]{WATER, AIR, ACID, TAR, SAND, MAGMA, MANA, BLOOD});
     }
 
 }
