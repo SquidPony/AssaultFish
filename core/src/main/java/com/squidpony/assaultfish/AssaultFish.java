@@ -28,6 +28,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -65,7 +66,6 @@ public class AssaultFish extends ApplicationAdapter {
     private static final String SOUND_PREF = "Sound Pref";
     private static final DateTimeFormatter SCREENSHOT_TIME = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final DateTimeFormatter RECORDING_TIME = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
-    private static final int RECORDING_FRAME_INTERVAL_MS = 100;
     private static final int RECORDING_FRAME_DELAY_MS = 100;
 
     private static final double WIDTH_SCALE = 1.2;
@@ -136,7 +136,10 @@ public class AssaultFish extends ApplicationAdapter {
     private Path recordingFramesDir;
     private String recordingStamp;
     private int recordingFrameIndex;
-    private long lastRecordingFrameTime;
+    private boolean recordingCaptureRequested;
+    private boolean recordingCaptureOnlyIfChanged;
+    private boolean recordingHasFrameHash;
+    private int recordingLastFrameHash;
 
     private boolean[][] terrainMap;
     private boolean[][] liquidMap;
@@ -229,7 +232,7 @@ public class AssaultFish extends ApplicationAdapter {
 
         stage.act(Gdx.graphics.getDeltaTime());
         stage.draw();
-        captureRecordingFrame();
+        flushRecordingCapture();
     }
 
     @Override
@@ -563,6 +566,9 @@ public class AssaultFish extends ApplicationAdapter {
         }
 
         fishInventoryPanel.put((int) MUTE_ICON_LOCATION.x, (int) MUTE_ICON_LOCATION.y, soundOn ? "MUTE" : "UNMT", SColor.SAFETY_ORANGE);
+        if (nowFishing) {
+            requestFishingRecordingFrame();
+        }
     }
 
     private void showHelp() {
@@ -881,6 +887,7 @@ public class AssaultFish extends ApplicationAdapter {
         meterPanel.clear();
         initMeter();
         if (!casting) {
+            requestFishingRecordingFrame();
             return;
         }
         double elapsed = System.currentTimeMillis() - castStartTime;
@@ -897,6 +904,7 @@ public class AssaultFish extends ApplicationAdapter {
                 meterPanel.put(i + meterOffset, 1, bobber, color);
             }
         }
+        requestFishingRecordingFrame();
     }
 
     private void initMeter() {
@@ -909,11 +917,13 @@ public class AssaultFish extends ApplicationAdapter {
         updateMap();
         if (monsters.isEmpty()) {
             win();
+            requestMapTurnRecordingFrame();
             return;
         }
         checkForReactions();
         moveAllMonsters();
         updateMap();
+        requestMapTurnRecordingFrame();
     }
 
     private void workClick(final int x, final int y) {
@@ -1301,6 +1311,9 @@ public class AssaultFish extends ApplicationAdapter {
         }
         outputPanel.put(1, GRID_HEIGHT - 2, message, SColor.TEA_GREEN);
         outputEndTime = System.currentTimeMillis() + OUTPUT_DURATION_MS;
+        if (nowFishing) {
+            requestFishingRecordingFrame();
+        }
     }
 
     private void doFOV() {
@@ -1513,6 +1526,7 @@ public class AssaultFish extends ApplicationAdapter {
                 fishingLayers.put(bobberLocation.x, hookY, hookedFish.symbol.charAt(0), hookedFish.color);
             }
         }
+        requestFishingRecordingFrame();
     }
 
     private void drawFishingLineTo(Coord target, Color tipColor, int lineBottomOverrideY) {
@@ -1687,13 +1701,20 @@ public class AssaultFish extends ApplicationAdapter {
             Files.createDirectories(recordingFramesDir);
             recordingActive = true;
             recordingFrameIndex = 0;
-            lastRecordingFrameTime = 0L;
+            recordingCaptureRequested = false;
+            recordingCaptureOnlyIfChanged = false;
+            recordingHasFrameHash = false;
+            recordingLastFrameHash = 0;
             printOut("Recording started. Press V again to save a GIF.");
         } catch (IOException ex) {
             recordingActive = false;
             recordingFramesDir = null;
             recordingStamp = null;
             recordingFrameIndex = 0;
+            recordingCaptureRequested = false;
+            recordingCaptureOnlyIfChanged = false;
+            recordingHasFrameHash = false;
+            recordingLastFrameHash = 0;
             printOut("Unable to start recording: " + ex.getMessage());
         }
     }
@@ -1703,6 +1724,7 @@ public class AssaultFish extends ApplicationAdapter {
             return;
         }
 
+        flushRecordingCapture();
         recordingActive = false;
         try {
             if (recordingFramesDir == null || recordingFrameIndex == 0) {
@@ -1734,25 +1756,52 @@ public class AssaultFish extends ApplicationAdapter {
         }
     }
 
-    private void captureRecordingFrame() {
-        if (!recordingActive || recordingFramesDir == null) {
+    private void requestMapTurnRecordingFrame() {
+        if (!recordingActive || !mapMode) {
             return;
         }
 
-        long now = System.currentTimeMillis();
-        if (now - lastRecordingFrameTime < RECORDING_FRAME_INTERVAL_MS) {
+        requestRecordingFrame(false);
+    }
+
+    private void requestFishingRecordingFrame() {
+        if (!recordingActive || !nowFishing) {
             return;
         }
-        lastRecordingFrameTime = now;
+
+        requestRecordingFrame(true);
+    }
+
+    private void requestRecordingFrame(boolean onlyIfChanged) {
+        if (!recordingCaptureRequested) {
+            recordingCaptureRequested = true;
+            recordingCaptureOnlyIfChanged = onlyIfChanged;
+            return;
+        }
+
+        recordingCaptureOnlyIfChanged &= onlyIfChanged;
+    }
+
+    private void flushRecordingCapture() {
+        if (!recordingActive || !recordingCaptureRequested || recordingFramesDir == null) {
+            return;
+        }
+
+        boolean onlyIfChanged = recordingCaptureOnlyIfChanged;
+        recordingCaptureRequested = false;
+        recordingCaptureOnlyIfChanged = false;
 
         try {
-            Files.createDirectories(recordingFramesDir);
-            recordingFrameIndex++;
-            Path frameFile = recordingFramesDir.resolve(String.format("frame-%06d.png", recordingFrameIndex));
             Pixmap pixmap = Pixmap.createFromFrameBuffer(0, 0, Gdx.graphics.getBackBufferWidth(), Gdx.graphics.getBackBufferHeight());
             Pixmap flipped = flipPixmapVertically(pixmap);
             try {
-                PixmapIO.writePNG(Gdx.files.absolute(frameFile.toAbsolutePath().toString()), flipped);
+                int frameHash = hashPixmap(flipped);
+                if (onlyIfChanged && recordingHasFrameHash && recordingLastFrameHash == frameHash) {
+                    return;
+                }
+                writeRecordingFrame(flipped);
+                recordingLastFrameHash = frameHash;
+                recordingHasFrameHash = true;
             } finally {
                 flipped.dispose();
                 pixmap.dispose();
@@ -1771,7 +1820,26 @@ public class AssaultFish extends ApplicationAdapter {
         recordingFramesDir = null;
         recordingStamp = null;
         recordingFrameIndex = 0;
-        lastRecordingFrameTime = 0L;
+        recordingCaptureRequested = false;
+        recordingCaptureOnlyIfChanged = false;
+        recordingHasFrameHash = false;
+        recordingLastFrameHash = 0;
+    }
+
+    private void writeRecordingFrame(Pixmap frame) throws IOException {
+        Files.createDirectories(recordingFramesDir);
+        recordingFrameIndex++;
+        Path frameFile = recordingFramesDir.resolve(String.format("frame-%06d.png", recordingFrameIndex));
+        PixmapIO.writePNG(Gdx.files.absolute(frameFile.toAbsolutePath().toString()), frame);
+    }
+
+    private static int hashPixmap(Pixmap pixmap) {
+        ByteBuffer pixels = pixmap.getPixels();
+        int hash = 1;
+        for (int i = 0, limit = pixels.limit(); i < limit; i++) {
+            hash = 31 * hash + pixels.get(i);
+        }
+        return hash;
     }
 
     private static List<Path> listRecordingFrames(Path frameDir) throws IOException {
