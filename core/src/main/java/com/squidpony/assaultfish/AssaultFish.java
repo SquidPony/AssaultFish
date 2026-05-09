@@ -51,6 +51,8 @@ public class AssaultFish extends ApplicationAdapter {
     private static final String VERSION = "2.0.0";
     private static final String SOUND_PREF = "Sound Pref";
     private static final DateTimeFormatter SCREENSHOT_TIME = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
+    private static final DateTimeFormatter RECORDING_TIME = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
+    private static final int RECORDING_GIF_FRAME_DELAY_MS = 100;
 
     private static final double WIDTH_SCALE = 1.2;
     private static final double HEIGHT_SCALE = 1.2;
@@ -116,6 +118,7 @@ public class AssaultFish extends ApplicationAdapter {
     private double castingStrength = 0.4;
     private long castStartTime;
     private long outputEndTime;
+    private GifRecordingSession recordingSession;
 
     private boolean[][] terrainMap;
     private boolean[][] liquidMap;
@@ -208,6 +211,7 @@ public class AssaultFish extends ApplicationAdapter {
 
         stage.act(Gdx.graphics.getDeltaTime());
         stage.draw();
+        flushRecordingCapture();
     }
 
     @Override
@@ -235,6 +239,10 @@ public class AssaultFish extends ApplicationAdapter {
             public boolean keyDown(int keycode) {
                 if (keycode == Input.Keys.P) {
                     takeScreenshot();
+                    return true;
+                }
+                if (keycode == Input.Keys.V) {
+                    toggleRecording();
                     return true;
                 }
                 if (keycode == Input.Keys.H) {
@@ -537,6 +545,9 @@ public class AssaultFish extends ApplicationAdapter {
         }
 
         fishInventoryPanel.put((int) MUTE_ICON_LOCATION.x, (int) MUTE_ICON_LOCATION.y, soundOn ? "MUTE" : "UNMT", SColor.SAFETY_ORANGE);
+        if (nowFishing) {
+            requestFishingRecordingFrame();
+        }
     }
 
     private void showHelp() {
@@ -600,6 +611,8 @@ public class AssaultFish extends ApplicationAdapter {
             helpPane.put(left + 10, y++, "- show this screen", SColor.WHITE);
             helpPane.put(left, y, "P", command);
             helpPane.put(left + 2, y++, "- save a screenshot", SColor.WHITE);
+            helpPane.put(left, y, "V", command);
+            helpPane.put(left + 2, y++, "- start or stop animated GIF recording", SColor.WHITE);
             y += 2;
 
             text = "Fishing Controls";
@@ -853,6 +866,7 @@ public class AssaultFish extends ApplicationAdapter {
         meterPanel.clear();
         initMeter();
         if (!casting) {
+            requestFishingRecordingFrame();
             return;
         }
         double elapsed = System.currentTimeMillis() - castStartTime;
@@ -869,6 +883,7 @@ public class AssaultFish extends ApplicationAdapter {
                 meterPanel.put(i + meterOffset, 1, bobber, color);
             }
         }
+        requestFishingRecordingFrame();
     }
 
     private void initMeter() {
@@ -881,11 +896,13 @@ public class AssaultFish extends ApplicationAdapter {
         updateMap();
         if (monsters.isEmpty()) {
             win();
+            requestMapTurnRecordingFrame();
             return;
         }
         checkForReactions();
         moveAllMonsters();
         updateMap();
+        requestMapTurnRecordingFrame();
     }
 
     private void workClick(final int x, final int y) {
@@ -896,6 +913,7 @@ public class AssaultFish extends ApplicationAdapter {
     }
 
     private void exiting() {
+        finalizeRecordingBeforeExit();
         Gdx.app.exit();
     }
 
@@ -1272,6 +1290,9 @@ public class AssaultFish extends ApplicationAdapter {
         }
         outputPanel.put(1, GRID_HEIGHT - 2, message, SColor.TEA_GREEN);
         outputEndTime = System.currentTimeMillis() + OUTPUT_DURATION_MS;
+        if (nowFishing) {
+            requestFishingRecordingFrame();
+        }
     }
 
     private void doFOV() {
@@ -1484,6 +1505,7 @@ public class AssaultFish extends ApplicationAdapter {
                 fishingLayers.put(bobberLocation.x, hookY, hookedFish.symbol.charAt(0), hookedFish.color);
             }
         }
+        requestFishingRecordingFrame();
     }
 
     private void drawFishingLineTo(Coord target, Color tipColor, int lineBottomOverrideY) {
@@ -1640,6 +1662,94 @@ public class AssaultFish extends ApplicationAdapter {
             printOut("Saved screenshot to " + target.toString());
         } catch (IOException ex) {
             printOut("Failed to save screenshot: " + ex.getMessage());
+        }
+    }
+
+    private void toggleRecording() {
+        if (recordingSession != null) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    }
+
+    private void startRecording() {
+        try {
+            Path screenshotDir = Path.of("screenshots");
+            recordingSession = GifRecordingSession.start(screenshotDir, LocalDateTime.now().format(RECORDING_TIME));
+            printOut("Recording started. Press V again to save a GIF.");
+        } catch (IOException ex) {
+            recordingSession = null;
+            printOut("Unable to start recording: " + ex.getMessage());
+        }
+    }
+
+    private void stopRecording() {
+        if (recordingSession == null) {
+            return;
+        }
+
+        flushRecordingCapture();
+        try {
+            Path target = recordingSession.finish(
+                    Path.of("screenshots"),
+                    "assaultfish-recording",
+                    RECORDING_GIF_FRAME_DELAY_MS,
+                    true);
+            if (target == null) {
+                printOut("Recording stopped (no frames captured).");
+                return;
+            }
+            printOut("Saved recording to " + target.toAbsolutePath());
+        } catch (IOException ex) {
+            printOut("Failed to save recording: " + ex.getMessage());
+        } finally {
+            recordingSession = null;
+        }
+    }
+
+    private void finalizeRecordingBeforeExit() {
+        if (recordingSession != null) {
+            stopRecording();
+        }
+    }
+
+    private void requestMapTurnRecordingFrame() {
+        if (recordingSession == null || !mapMode) {
+            return;
+        }
+
+        recordingSession.requestCapture(false);
+    }
+
+    private void requestFishingRecordingFrame() {
+        if (recordingSession == null || !nowFishing) {
+            return;
+        }
+
+        recordingSession.requestCapture(true);
+    }
+
+    private void flushRecordingCapture() {
+        if (recordingSession == null) {
+            return;
+        }
+
+        try {
+            Pixmap pixmap = Pixmap.createFromFrameBuffer(0, 0, Gdx.graphics.getBackBufferWidth(), Gdx.graphics.getBackBufferHeight());
+            Pixmap flipped = flipPixmapVertically(pixmap);
+            try {
+                recordingSession.flushCapture(flipped);
+            } finally {
+                flipped.dispose();
+                pixmap.dispose();
+            }
+        } catch (IOException ex) {
+            if (recordingSession != null) {
+                recordingSession.discard();
+                recordingSession = null;
+            }
+            printOut("Recording failed: " + ex.getMessage());
         }
     }
 
