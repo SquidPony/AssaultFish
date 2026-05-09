@@ -1,0 +1,283 @@
+name: Build and Release Artifacts
+
+on:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-and-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      build_version: ${{ steps.compute.outputs.build_version }}
+      release_tag: ${{ steps.compute.outputs.release_tag }}
+      should_release: ${{ steps.compute.outputs.should_release }}
+      should_create_tag: ${{ steps.compute.outputs.should_create_tag }}
+
+    steps:
+      - name: Compute build and release version
+        id: compute
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isMainPush =
+              context.eventName === 'push' &&
+              context.ref === 'refs/heads/main';
+
+            const sanitize = (value) => value.replaceAll('/', '-');
+
+            if (!isMainPush) {
+              core.setOutput('build_version', sanitize(context.ref.replace('refs/heads/', '')));
+              core.setOutput('release_tag', '');
+              core.setOutput('should_release', 'false');
+              core.setOutput('should_create_tag', 'false');
+              return;
+            }
+
+            const tags = await github.paginate(
+              github.rest.repos.listTags,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
+              }
+            );
+
+            const numericTags = tags
+              .map(({ name, commit }) => {
+                const match = name.match(/^v?(\d+)\.(\d+)$/);
+                if (!match) {
+                  return null;
+                }
+
+                return {
+                  name,
+                  commit,
+                  major: Number.parseInt(match[1], 10),
+                  minor: Number.parseInt(match[2], 10),
+                };
+              })
+              .filter(Boolean)
+              .sort((left, right) => {
+                if (left.major !== right.major) {
+                  return left.major - right.major;
+                }
+
+                return left.minor - right.minor;
+              });
+
+            const latest = numericTags.at(-1);
+            const existingTag = numericTags.find((tag) => tag.commit.sha === context.sha);
+            const nextTag = existingTag
+              ? existingTag.name.replace(/^v/, '')
+              : latest
+                ? `${latest.major}.${latest.minor + 1}`
+                : '1.0';
+
+            core.setOutput('build_version', nextTag);
+            core.setOutput('release_tag', nextTag);
+            core.setOutput('should_release', 'true');
+            core.setOutput('should_create_tag', existingTag ? 'false' : 'true');
+
+  build:
+    needs: version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Build fat JAR
+        run: ./gradlew lwjgl3:jar
+
+      - name: Package universal artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.version.outputs.build_version }}"
+          DIST_NAME="assaultfish-${VERSION}"
+          DIST_DIR="build/dist/${DIST_NAME}"
+          ARTIFACTS_DIR="build/artifacts"
+
+          mkdir -p "${DIST_DIR}" "${ARTIFACTS_DIR}"
+
+          JAR=$(ls lwjgl3/build/libs/AssaultFish-*.jar | head -1)
+          cp "${JAR}" "${DIST_DIR}/AssaultFish.jar"
+
+          printf "AssaultFish\n\nRun:\n  java -jar AssaultFish.jar\n\nNotes:\n  Requires Java 25 or newer.\n" \
+            > "${DIST_DIR}/README.txt"
+
+          cd "build/dist"
+          zip -rq "../artifacts/assaultfish-${VERSION}-universal.zip" "${DIST_NAME}"
+          tar -czf "../artifacts/assaultfish-${VERSION}-universal.tar.gz" "${DIST_NAME}"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: assaultfish-${{ needs.version.outputs.build_version }}
+          path: build/artifacts/*
+
+  native-build:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: macos
+          - os: windows-latest
+            platform: windows
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Build fat JAR
+        shell: bash
+        run: ./gradlew lwjgl3:jar
+
+      - name: Build native app image
+        shell: bash
+        run: |
+          set -euo pipefail
+          JAR=$(ls lwjgl3/build/libs/AssaultFish-*.jar | head -1)
+          OUT_DIR="build/native/${{ matrix.platform }}"
+          mkdir -p "${OUT_DIR}"
+          jpackage \
+            --type app-image \
+            --name "AssaultFish" \
+            --dest "${OUT_DIR}" \
+            --input "$(dirname "${JAR}")" \
+            --main-jar "$(basename "${JAR}")" \
+            --main-class com.squidpony.assaultfish.lwjgl3.Lwjgl3Launcher
+          echo "Native app image created in ${OUT_DIR}"
+
+      - name: Upload native app image
+        uses: actions/upload-artifact@v4
+        with:
+          name: assaultfish-${{ needs.version.outputs.build_version }}-native-${{ matrix.platform }}
+          path: build/native/${{ matrix.platform }}/**
+
+  release:
+    if: needs.version.outputs.should_release == 'true'
+    needs:
+      - version
+      - build
+      - native-build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create release tag
+        if: needs.version.outputs.should_create_tag == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/${{ needs.version.outputs.release_tag }}',
+              sha: context.sha,
+            });
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: assaultfish-${{ needs.version.outputs.release_tag }}
+          path: build/artifacts
+
+      - name: Download native artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: assaultfish-${{ needs.version.outputs.release_tag }}-native-*
+          path: build/native
+
+      - name: Archive native artifacts for release
+        shell: bash
+        run: |
+          mkdir -p build/artifacts
+          artifacts_dir="$PWD/build/artifacts"
+          tag="${{ needs.version.outputs.release_tag }}"
+          for artifact_dir in build/native/assaultfish-${{ needs.version.outputs.release_tag }}-native-*; do
+            [[ -d "$artifact_dir" ]] || continue
+            platform="${artifact_dir##*-native-}"
+            case "$platform" in
+              windows)
+                (
+                  cd "$artifact_dir"
+                  zip -rq "$artifacts_dir/assaultfish-${tag}-windows-x64.zip" .
+                )
+                ;;
+              macos)
+                (
+                  cd "$artifact_dir"
+                  zip -rq "$artifacts_dir/assaultfish-${tag}-macos-x64.zip" .
+                )
+                ;;
+              linux)
+                tar -C "$artifact_dir" -czf "$artifacts_dir/assaultfish-${tag}-linux-x64.tar.gz" .
+                ;;
+              *)
+                echo "Unknown native platform artifact: $platform"
+                exit 1
+                ;;
+            esac
+          done
+
+      - name: Verify release artifact coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ needs.version.outputs.release_tag }}"
+          required=(
+            "build/artifacts/assaultfish-${tag}-universal.zip"
+            "build/artifacts/assaultfish-${tag}-universal.tar.gz"
+            "build/artifacts/assaultfish-${tag}-linux-x64.tar.gz"
+            "build/artifacts/assaultfish-${tag}-macos-x64.zip"
+            "build/artifacts/assaultfish-${tag}-windows-x64.zip"
+          )
+
+          missing=0
+          for f in "${required[@]}"; do
+            if [[ ! -f "$f" ]]; then
+              echo "Missing required artifact: $f"
+              missing=1
+            fi
+          done
+
+          if [[ "$missing" -ne 0 ]]; then
+            echo "Release aborted: one or more required platform artifacts are missing."
+            exit 1
+          fi
+
+          echo "All required release artifacts are present."
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.release_tag }}
+          name: ${{ needs.version.outputs.release_tag }}
+          generate_release_notes: true
+          files: build/artifacts/*
