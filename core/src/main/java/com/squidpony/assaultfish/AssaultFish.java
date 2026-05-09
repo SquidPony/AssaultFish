@@ -26,14 +26,27 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Queue;
 import java.util.TreeMap;
+import java.awt.image.BufferedImage;
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageTypeSpecifier;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.metadata.IIOMetadata;
+import javax.imageio.metadata.IIOMetadataNode;
+import javax.imageio.stream.FileImageOutputStream;
+import javax.imageio.stream.ImageOutputStream;
 import squidpony.squidgrid.Direction;
 import squidpony.squidgrid.FOV;
 import squidpony.squidgrid.Radius;
@@ -51,6 +64,9 @@ public class AssaultFish extends ApplicationAdapter {
     private static final String VERSION = "2.0.0";
     private static final String SOUND_PREF = "Sound Pref";
     private static final DateTimeFormatter SCREENSHOT_TIME = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
+    private static final DateTimeFormatter RECORDING_TIME = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
+    private static final int RECORDING_FRAME_INTERVAL_MS = 100;
+    private static final int RECORDING_FRAME_DELAY_MS = 100;
 
     private static final double WIDTH_SCALE = 1.2;
     private static final double HEIGHT_SCALE = 1.2;
@@ -116,6 +132,11 @@ public class AssaultFish extends ApplicationAdapter {
     private double castingStrength = 0.4;
     private long castStartTime;
     private long outputEndTime;
+    private boolean recordingActive;
+    private Path recordingFramesDir;
+    private String recordingStamp;
+    private int recordingFrameIndex;
+    private long lastRecordingFrameTime;
 
     private boolean[][] terrainMap;
     private boolean[][] liquidMap;
@@ -208,6 +229,7 @@ public class AssaultFish extends ApplicationAdapter {
 
         stage.act(Gdx.graphics.getDeltaTime());
         stage.draw();
+        captureRecordingFrame();
     }
 
     @Override
@@ -235,6 +257,10 @@ public class AssaultFish extends ApplicationAdapter {
             public boolean keyDown(int keycode) {
                 if (keycode == Input.Keys.P) {
                     takeScreenshot();
+                    return true;
+                }
+                if (keycode == Input.Keys.V) {
+                    toggleRecording();
                     return true;
                 }
                 if (keycode == Input.Keys.H) {
@@ -600,6 +626,8 @@ public class AssaultFish extends ApplicationAdapter {
             helpPane.put(left + 10, y++, "- show this screen", SColor.WHITE);
             helpPane.put(left, y, "P", command);
             helpPane.put(left + 2, y++, "- save a screenshot", SColor.WHITE);
+            helpPane.put(left, y, "V", command);
+            helpPane.put(left + 2, y++, "- start or stop animated GIF recording", SColor.WHITE);
             y += 2;
 
             text = "Fishing Controls";
@@ -896,6 +924,7 @@ public class AssaultFish extends ApplicationAdapter {
     }
 
     private void exiting() {
+        finalizeRecordingBeforeExit();
         Gdx.app.exit();
     }
 
@@ -1640,6 +1669,232 @@ public class AssaultFish extends ApplicationAdapter {
             printOut("Saved screenshot to " + target.toString());
         } catch (IOException ex) {
             printOut("Failed to save screenshot: " + ex.getMessage());
+        }
+    }
+
+    private void toggleRecording() {
+        if (recordingActive) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    }
+
+    private void startRecording() {
+        try {
+            recordingStamp = LocalDateTime.now().format(RECORDING_TIME);
+            recordingFramesDir = Path.of("screenshots", "recording-" + recordingStamp + "-frames");
+            Files.createDirectories(recordingFramesDir);
+            recordingActive = true;
+            recordingFrameIndex = 0;
+            lastRecordingFrameTime = 0L;
+            printOut("Recording started. Press V again to save a GIF.");
+        } catch (IOException ex) {
+            recordingActive = false;
+            recordingFramesDir = null;
+            recordingStamp = null;
+            recordingFrameIndex = 0;
+            printOut("Unable to start recording: " + ex.getMessage());
+        }
+    }
+
+    private void stopRecording() {
+        if (!recordingActive) {
+            return;
+        }
+
+        recordingActive = false;
+        try {
+            if (recordingFramesDir == null || recordingFrameIndex == 0) {
+                printOut("Recording stopped (no frames captured).");
+                return;
+            }
+
+            List<Path> frameFiles = listRecordingFrames(recordingFramesDir);
+            if (frameFiles.isEmpty()) {
+                printOut("Recording stopped (no frames captured).");
+                return;
+            }
+
+            Path screenshotDir = Path.of("screenshots");
+            Files.createDirectories(screenshotDir);
+            Path target = screenshotDir.resolve("assaultfish-recording-" + recordingStamp + ".gif");
+            writeAnimatedGif(frameFiles, target, RECORDING_FRAME_DELAY_MS, true);
+            printOut("Saved recording to " + target.toAbsolutePath());
+        } catch (IOException ex) {
+            printOut("Failed to save recording: " + ex.getMessage());
+        } finally {
+            cleanupRecordingTemp();
+        }
+    }
+
+    private void finalizeRecordingBeforeExit() {
+        if (recordingActive) {
+            stopRecording();
+        }
+    }
+
+    private void captureRecordingFrame() {
+        if (!recordingActive || recordingFramesDir == null) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        if (now - lastRecordingFrameTime < RECORDING_FRAME_INTERVAL_MS) {
+            return;
+        }
+        lastRecordingFrameTime = now;
+
+        try {
+            Files.createDirectories(recordingFramesDir);
+            recordingFrameIndex++;
+            Path frameFile = recordingFramesDir.resolve(String.format("frame-%06d.png", recordingFrameIndex));
+            Pixmap pixmap = Pixmap.createFromFrameBuffer(0, 0, Gdx.graphics.getBackBufferWidth(), Gdx.graphics.getBackBufferHeight());
+            Pixmap flipped = flipPixmapVertically(pixmap);
+            try {
+                PixmapIO.writePNG(Gdx.files.absolute(frameFile.toAbsolutePath().toString()), flipped);
+            } finally {
+                flipped.dispose();
+                pixmap.dispose();
+            }
+        } catch (IOException ex) {
+            recordingActive = false;
+            printOut("Recording failed: " + ex.getMessage());
+            cleanupRecordingTemp();
+        }
+    }
+
+    private void cleanupRecordingTemp() {
+        if (recordingFramesDir != null) {
+            deleteDirectory(recordingFramesDir.toFile());
+        }
+        recordingFramesDir = null;
+        recordingStamp = null;
+        recordingFrameIndex = 0;
+        lastRecordingFrameTime = 0L;
+    }
+
+    private static List<Path> listRecordingFrames(Path frameDir) throws IOException {
+        List<Path> files = new ArrayList<>();
+        if (frameDir == null || !Files.exists(frameDir) || !Files.isDirectory(frameDir)) {
+            return files;
+        }
+        try (java.util.stream.Stream<Path> stream = Files.list(frameDir)) {
+            stream.filter(path -> path.getFileName().toString().endsWith(".png"))
+                    .sorted()
+                    .forEach(files::add);
+        }
+        return files;
+    }
+
+    private static void writeAnimatedGif(List<Path> frameFiles, Path outputFile, int delayMs, boolean loopForever)
+            throws IOException {
+        if (frameFiles.isEmpty()) {
+            return;
+        }
+
+        BufferedImage first = ImageIO.read(frameFiles.get(0).toFile());
+        if (first == null) {
+            throw new IOException("Unable to read first recording frame");
+        }
+        int imageType = first.getType() == BufferedImage.TYPE_CUSTOM ? BufferedImage.TYPE_INT_ARGB : first.getType();
+
+        try (ImageOutputStream outputStream = new FileImageOutputStream(outputFile.toFile());
+                GifSequenceWriter gifWriter = new GifSequenceWriter(outputStream, imageType, delayMs, loopForever)) {
+            gifWriter.writeToSequence(first);
+            for (int i = 1; i < frameFiles.size(); i++) {
+                BufferedImage frame = ImageIO.read(frameFiles.get(i).toFile());
+                if (frame != null) {
+                    gifWriter.writeToSequence(frame);
+                }
+            }
+        }
+    }
+
+    private static void deleteDirectory(File dir) {
+        if (dir == null || !dir.exists()) {
+            return;
+        }
+        File[] children = dir.listFiles();
+        if (children != null) {
+            for (File child : children) {
+                deleteDirectory(child);
+            }
+        }
+        dir.delete();
+    }
+
+    private static final class GifSequenceWriter implements AutoCloseable {
+        private final ImageWriter gifWriter;
+        private final ImageWriteParam imageWriteParam;
+        private final IIOMetadata imageMetaData;
+
+        private GifSequenceWriter(ImageOutputStream outputStream, int imageType, int timeBetweenFramesMs,
+                boolean loopContinuously) throws IOException {
+            gifWriter = getWriter();
+            imageWriteParam = gifWriter.getDefaultWriteParam();
+            ImageTypeSpecifier imageTypeSpecifier = ImageTypeSpecifier.createFromBufferedImageType(imageType);
+
+            imageMetaData = gifWriter.getDefaultImageMetadata(imageTypeSpecifier, imageWriteParam);
+
+            String metaFormatName = imageMetaData.getNativeMetadataFormatName();
+            IIOMetadataNode root = (IIOMetadataNode) imageMetaData.getAsTree(metaFormatName);
+
+            IIOMetadataNode graphicsControlExtensionNode = getNode(root, "GraphicControlExtension");
+            graphicsControlExtensionNode.setAttribute("disposalMethod", "none");
+            graphicsControlExtensionNode.setAttribute("userInputFlag", "FALSE");
+            graphicsControlExtensionNode.setAttribute("transparentColorFlag", "FALSE");
+            graphicsControlExtensionNode.setAttribute("delayTime", Integer.toString(Math.max(1, timeBetweenFramesMs / 10)));
+            graphicsControlExtensionNode.setAttribute("transparentColorIndex", "0");
+
+            IIOMetadataNode commentsNode = getNode(root, "CommentExtensions");
+            commentsNode.setAttribute("CommentExtension", "Created by AssaultFish");
+
+            IIOMetadataNode applicationExtensionsNode = getNode(root, "ApplicationExtensions");
+            IIOMetadataNode child = new IIOMetadataNode("ApplicationExtension");
+            child.setAttribute("applicationID", "NETSCAPE");
+            child.setAttribute("authenticationCode", "2.0");
+            int loop = loopContinuously ? 0 : 1;
+            child.setUserObject(new byte[] {
+                    0x1,
+                    (byte) (loop & 0xFF),
+                    (byte) ((loop >> 8) & 0xFF)
+            });
+            applicationExtensionsNode.appendChild(child);
+
+            imageMetaData.setFromTree(metaFormatName, root);
+
+            gifWriter.setOutput(outputStream);
+            gifWriter.prepareWriteSequence(null);
+        }
+
+        private void writeToSequence(BufferedImage img) throws IOException {
+            gifWriter.writeToSequence(new IIOImage(img, null, imageMetaData), imageWriteParam);
+        }
+
+        @Override
+        public void close() throws IOException {
+            gifWriter.endWriteSequence();
+        }
+
+        private static ImageWriter getWriter() throws IOException {
+            Iterator<ImageWriter> iter = ImageIO.getImageWritersBySuffix("gif");
+            if (!iter.hasNext()) {
+                throw new IOException("No GIF Image Writers Exist");
+            }
+            return iter.next();
+        }
+
+        private static IIOMetadataNode getNode(IIOMetadataNode rootNode, String nodeName) {
+            int nNodes = rootNode.getLength();
+            for (int i = 0; i < nNodes; i++) {
+                if (rootNode.item(i).getNodeName().equalsIgnoreCase(nodeName)) {
+                    return (IIOMetadataNode) rootNode.item(i);
+                }
+            }
+            IIOMetadataNode node = new IIOMetadataNode(nodeName);
+            rootNode.appendChild(node);
+            return node;
         }
     }
 

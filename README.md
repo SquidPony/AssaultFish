@@ -42,6 +42,7 @@ Defeat every elemental monster on the map.
 - Help: `H`
 - Exit: `ESC`
 - Screenshot: `P`
+- Animated GIF recording: `V`
 
 ## Run
 
