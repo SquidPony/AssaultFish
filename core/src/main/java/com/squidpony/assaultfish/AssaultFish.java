@@ -66,7 +66,7 @@ public class AssaultFish extends ApplicationAdapter {
     private static final String SOUND_PREF = "Sound Pref";
     private static final DateTimeFormatter SCREENSHOT_TIME = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final DateTimeFormatter RECORDING_TIME = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
-    private static final int RECORDING_FRAME_DELAY_MS = 100;
+    private static final int RECORDING_GIF_FRAME_DELAY_MS = 100;
 
     private static final double WIDTH_SCALE = 1.2;
     private static final double HEIGHT_SCALE = 1.2;
@@ -1700,21 +1700,13 @@ public class AssaultFish extends ApplicationAdapter {
             recordingFramesDir = Path.of("screenshots", "recording-" + recordingStamp + "-frames");
             Files.createDirectories(recordingFramesDir);
             recordingActive = true;
-            recordingFrameIndex = 0;
-            recordingCaptureRequested = false;
-            recordingCaptureOnlyIfChanged = false;
-            recordingHasFrameHash = false;
-            recordingLastFrameHash = 0;
+            resetRecordingCaptureState();
             printOut("Recording started. Press V again to save a GIF.");
         } catch (IOException ex) {
             recordingActive = false;
             recordingFramesDir = null;
             recordingStamp = null;
-            recordingFrameIndex = 0;
-            recordingCaptureRequested = false;
-            recordingCaptureOnlyIfChanged = false;
-            recordingHasFrameHash = false;
-            recordingLastFrameHash = 0;
+            resetRecordingCaptureState();
             printOut("Unable to start recording: " + ex.getMessage());
         }
     }
@@ -1741,7 +1733,7 @@ public class AssaultFish extends ApplicationAdapter {
             Path screenshotDir = Path.of("screenshots");
             Files.createDirectories(screenshotDir);
             Path target = screenshotDir.resolve("assaultfish-recording-" + recordingStamp + ".gif");
-            writeAnimatedGif(frameFiles, target, RECORDING_FRAME_DELAY_MS, true);
+            writeAnimatedGif(frameFiles, target, RECORDING_GIF_FRAME_DELAY_MS, true);
             printOut("Saved recording to " + target.toAbsolutePath());
         } catch (IOException ex) {
             printOut("Failed to save recording: " + ex.getMessage());
@@ -1819,6 +1811,10 @@ public class AssaultFish extends ApplicationAdapter {
         }
         recordingFramesDir = null;
         recordingStamp = null;
+        resetRecordingCaptureState();
+    }
+
+    private void resetRecordingCaptureState() {
         recordingFrameIndex = 0;
         recordingCaptureRequested = false;
         recordingCaptureOnlyIfChanged = false;
